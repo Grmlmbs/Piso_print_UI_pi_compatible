@@ -8,8 +8,9 @@ const { promisify } = require('util');
 const { PDFDocument } = require('pdf-lib');
 const fsPromise = require('fs').promises;
 const sharp = require('sharp');
-const db = require('./db'); // keep your existing db module
-const { fromPath } = require('pdf2pic');
+const { exec } = require('child_process');
+const db = require('./db');
+const execPromise = promisify(exec);
 
 const app = express();
 app.use(express.json());
@@ -72,88 +73,94 @@ async function uploadFileMiddleware(req, res) {
     });
 }
 
-async function resizePDF(originalPath, targetPath, width, height) {
-    const existingBytes = await fsPromise.readFile(originalPath);
-    const oldPdf = await PDFDocument.load(existingBytes);
-    const newPdf = await PDFDocument.create();
-    const oldPages = oldPdf.getPages();
+async function convertPdfToPngsWithGhostscript(pdfPath, outDir, baseName) {
+    const outputPattern = path.join(outDir, `${baseName}_%01d.png`);
+    const resolution = 72; // Resolution (DPI)
 
-    for (const oldPage of oldPages) {
-        const { width: oldW, height: oldH } = oldPage.getSize();
-        const newPage = newPdf.addPage([width, height]);
-        const embeddedPage = await newPdf.embedPage(oldPage);
+    // FIX: Use png16m for non-transparent, white background (was 'pngalpha')
+    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r${resolution} -sOutputFile=${outputPattern} ${pdfPath}`;
 
-        // center horizontally, top-align vertically (similar to previous behaviour)
-        const x = (width - oldW) / 2;
-        const y = height - oldH;
-        newPage.drawPage(embeddedPage, { x, y, width: oldW, height: oldH });
-    }
+    console.log(`--- DEBUG GHOSTSCRIPT EXECUTION ---`);
+    console.log(`Command: ${gsCommand}`);
+    console.log(`-----------------------------------`);
 
-    const pdfBytes = await newPdf.save();
-    await fsPromise.writeFile(targetPath, pdfBytes);
-}
-
-// Uses pdftoppm (poppler) to convert a pdf to pngs into outDir with prefix baseName
-// Requires `pdftoppm` available in PATH (poppler-utils)
-async function convertPdfToPngsWithPdf2Pic(pdfPath, outDir, baseName, density = 72) {
-    // CRITICAL FIX: Ensure all paths are absolute
-    const absolutePdfPath = path.resolve(pdfPath);
-    const absoluteOutDir = path.resolve(outDir);
-
-    // 1. Configure the conversion options
-    const options = {
-        density: density, // Resolution for the PNG
-        saveFilename: baseName,
-        savePath: absoluteOutDir, // Use absolute path for output
-        format: "png",
-        width: 612,
-        height: 792,
-        adapter: "im", // Use GraphicsMagick
-        gmPath: '/usr/bin/convert' // Use absolute path for the binary
-    };
-    
-    // 2. Instantiate the converter
-    const convert = fromPath(absolutePdfPath, options); // Use absolute path for input
-
-    // 3. Perform the conversion
-    console.log("--- DEBUG PDF2PIC CONFIGURATION ---");
-    console.log(`Input PDF (Absolute): ${absolutePdfPath}`);
-    console.log(`Output Dir (Absolute): ${absoluteOutDir}`);
-    console.log("Full Options:", options);
-    console.log("----------------------------------");
-
-    let result;
     try {
-        result = await convert.bulk(-1);
+        const { stdout, stderr } = await execPromise(gsCommand);
+        
+        if (stderr && !stderr.includes('Warning')) {
+            throw new Error(`Ghostscript Error: ${stderr}`);
+        }
+
+        // Ghostscript succeeded. Find the generated files.
+        const files = await fsPromise.readdir(outDir);
+        const pngPaths = files
+            .filter(f => f.startsWith(baseName) && f.endsWith('.png'))
+            .map(f => path.join(outDir, f));
+
+        if (pngPaths.length === 0) {
+            throw new Error('Ghostscript finished, but no PNG files found. The PDF may be corrupted or missing content.');
+        }
+
+        return pngPaths;
+
     } catch (e) {
-        // ... (Keep your existing verbose error logging here)
-        console.error('--- CRITICAL PDF2PIC CONVERSION FAILED. FULL ERROR DETAILS ---');
-        console.error(e); 
-        console.error('------------------------------------------------------------');
-        throw new Error('PDF2PIC conversion failed: ' + e.message);
+        console.error('--- CRITICAL GHOSTSCRIPT CONVERSION FAILED. ---');
+        console.error(e);
+        throw new Error('Ghostscript conversion failed: ' + e.message);
     }
+}
+async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
+    const existingBytes = await fsPromise.readFile(inputPath);
+    const pdfDoc = await PDFDocument.load(existingBytes);
     
-    // 4. Transform the result...
-    const matched = result
-        .filter(r => r.success)
-        .map(r => path.join(outDir, r.name));
+    // Create a new document to hold the resized pages
+    const newPdfDoc = await PDFDocument.create();
 
-    // CRITICAL CHECK: Log if files were found
-    if (matched.length === 0) {
-        console.warn(`PDF2PIC finished, but no PNG files found. Result Count: ${result.length}`);
+    const pages = pdfDoc.getPages();
+    for (const page of pages) {
+        
+        const embeddedPage = await newPdfDoc.embedPage(page);
+
+        // 1. Get size and sanitize (CRITICAL for NaN/Zero safety)
+        const { width, height } = embeddedPage.size;
+        
+        const sanitizedWidth = isNaN(width) ? 1 : width;
+        const sanitizedHeight = isNaN(height) ? 1 : height;
+
+        const safeWidth = Math.max(1, sanitizedWidth);
+        const safeHeight = Math.max(1, sanitizedHeight);
+
+        // 2. Add a new page with the target size
+        const newPage = newPdfDoc.addPage([targetWidth, targetHeight]);
+        
+        // Calculate scale factor to fit content within the new page size
+        const scaleX = targetWidth / safeWidth;
+        const scaleY = targetHeight / safeHeight;
+        
+        // REVERT: Use min scale. This allows stretching/compressing to fit the page.
+        const scale = Math.min(scaleX, scaleY); 
+
+        // 3. Draw the embedded page onto the new page
+        const scaledContentWidth = safeWidth * scale;
+        const scaledContentHeight = safeHeight * scale;
+        
+        // REVERT: Centering Positioning
+        // x: Center horizontally
+        const xPos = (targetWidth - scaledContentWidth) / 2;
+        // y: Center vertically
+        const yPos = (targetHeight - scaledContentHeight) / 2; 
+        
+        newPage.drawPage(embeddedPage, {
+            x: xPos,
+            y: yPos,
+            width: scaledContentWidth,
+            height: scaledContentHeight,
+        });
     }
 
-    return matched;
+    const pdfBytes = await newPdfDoc.save();
+    await fsPromise.writeFile(outputPath, pdfBytes);
 }
-
-// Convert to black&white (grayscale) if needed (overwrites file)
-async function convertToBWIfNeeded(filePath, userColorChoice) {
-    if (userColorChoice !== 'bw') return;
-    const tmp = filePath + '.tmp.png';
-    await sharp(filePath).greyscale().toFile(tmp);
-    await fsPromise.rename(tmp, filePath);
-}
-
 // Scan used sections (non-blocking): divides image into 12 horizontal bands and checks if any pixel not grey (i.e., used)
 async function scanUsedSections(filePath) {
     const img = sharp(filePath).ensureAlpha().removeAlpha(); // get RGB
@@ -256,9 +263,8 @@ app.post('/upload', async (req, res) => {
         ]);
 
         // Convert to PNG images with pdftoppm
-        const letterPngPaths = await convertPdfToPngsWithPdf2Pic(letterPDF, letterCache, baseName, 72);
-	const legalPngPaths = await convertPdfToPngsWithPdf2Pic(legalPDF, legalCache, baseName, 72);
-
+	const letterPngPaths = await convertPdfToPngsWithGhostscript(letterPDF, letterCache, baseName);
+	const legalPngPaths = await convertPdfToPngsWithGhostscript(legalPDF, legalCache, baseName);
         // return web paths (relative to server)
         const letterImages = letterPngPaths.map(p => '/cache/letter/' + path.basename(p));
         const legalImages = legalPngPaths.map(p => '/cache/legal/' + path.basename(p));

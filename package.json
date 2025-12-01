@@ -17,7 +17,6 @@
     "multer": "^2.0.2",
     "path": "^0.12.7",
     "pdf-lib": "^1.17.1",
-    "pdf2pic": "^3.2.0",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
