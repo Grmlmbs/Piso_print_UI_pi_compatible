@@ -67,22 +67,32 @@ const clearCache = async (folder) => {
     }
 };
 
-async function uploadFileMiddleware(req, res) {
-    return new Promise((resolve, reject) => {
-        upload.single('pdfFile')(req, res, err => err ? reject(err) : resolve());
-    });
+async function convertToBWIfNeeded(filePath, colorMode) {
+    if (colorMode === 'bw') {
+        try {
+            // Overwrite the file with its grayscale version
+            await sharp(filePath)
+                .grayscale() // Convert to Black & White
+                .toFile(filePath + '.bw.png'); // Save to a temp file
+            
+            // Rename to overwrite the original file (more memory efficient than streaming in place)
+            await fsPromise.rename(filePath + '.bw.png', filePath);
+
+        } catch (e) {
+            console.error('Error converting to BW:', filePath, e.message);
+            // Non-fatal, just proceed with the original file if conversion fails
+        }
+    }
 }
 
+
 async function convertPdfToPngsWithGhostscript(pdfPath, outDir, baseName) {
-    const outputPattern = path.join(outDir, `${baseName}_%01d.png`);
+    // FIX 1: Change to %d for non-zero-padded page numbers (e.g., _1.png)
+    const outputPattern = path.join(outDir, `${baseName}_%d.png`);
     const resolution = 72; // Resolution (DPI)
 
-    // FIX: Use png16m for non-transparent, white background (was 'pngalpha')
+    // Use png16m for non-transparent, white background
     const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r${resolution} -sOutputFile=${outputPattern} ${pdfPath}`;
-
-    console.log(`--- DEBUG GHOSTSCRIPT EXECUTION ---`);
-    console.log(`Command: ${gsCommand}`);
-    console.log(`-----------------------------------`);
 
     try {
         const { stdout, stderr } = await execPromise(gsCommand);
@@ -94,7 +104,7 @@ async function convertPdfToPngsWithGhostscript(pdfPath, outDir, baseName) {
         // Ghostscript succeeded. Find the generated files.
         const files = await fsPromise.readdir(outDir);
         const pngPaths = files
-            .filter(f => f.startsWith(baseName) && f.endsWith('.png'))
+            .filter(f => f.startsWith(baseName + '_') && f.endsWith('.png'))
             .map(f => path.join(outDir, f));
 
         if (pngPaths.length === 0) {
@@ -109,6 +119,8 @@ async function convertPdfToPngsWithGhostscript(pdfPath, outDir, baseName) {
         throw new Error('Ghostscript conversion failed: ' + e.message);
     }
 }
+
+// FIX 2: Updated resizePDF for Top Alignment (replication of oldserver.js logic)
 async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
     const existingBytes = await fsPromise.readFile(inputPath);
     const pdfDoc = await PDFDocument.load(existingBytes);
@@ -121,7 +133,7 @@ async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
         
         const embeddedPage = await newPdfDoc.embedPage(page);
 
-        // 1. Get size and sanitize (CRITICAL for NaN/Zero safety)
+        // 1. Get size and sanitize
         const { width, height } = embeddedPage.size;
         
         const sanitizedWidth = isNaN(width) ? 1 : width;
@@ -133,34 +145,25 @@ async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
         // 2. Add a new page with the target size
         const newPage = newPdfDoc.addPage([targetWidth, targetHeight]);
         
-        // Calculate scale factor to fit content within the new page size
+        // --- START SQUISHED FIX ---
+        // Calculate the necessary scaling factors for X and Y to fill the page
         const scaleX = targetWidth / safeWidth;
         const scaleY = targetHeight / safeHeight;
-        
-        // REVERT: Use min scale. This allows stretching/compressing to fit the page.
-        const scale = Math.min(scaleX, scaleY); 
 
-        // 3. Draw the embedded page onto the new page
-        const scaledContentWidth = safeWidth * scale;
-        const scaledContentHeight = safeHeight * scale;
-        
-        // REVERT: Centering Positioning
-        // x: Center horizontally
-        const xPos = (targetWidth - scaledContentWidth) / 2;
-        // y: Center vertically
-        const yPos = (targetHeight - scaledContentHeight) / 2; 
-        
+        // Draw the embedded page onto the new page, stretched to fill the entire area
         newPage.drawPage(embeddedPage, {
-            x: xPos,
-            y: yPos,
-            width: scaledContentWidth,
-            height: scaledContentHeight,
+            x: 0, // Start drawing from the bottom-left
+            y: 0,
+            width: safeWidth * scaleX,  // Will equal targetWidth
+            height: safeHeight * scaleY, // Will equal targetHeight
         });
+        // --- END SQUISHED FIX ---
     }
 
     const pdfBytes = await newPdfDoc.save();
     await fsPromise.writeFile(outputPath, pdfBytes);
 }
+
 // Scan used sections (non-blocking): divides image into 12 horizontal bands and checks if any pixel not grey (i.e., used)
 async function scanUsedSections(filePath) {
     const img = sharp(filePath).ensureAlpha().removeAlpha(); // get RGB
@@ -208,7 +211,8 @@ app.delete('/delete-last/:baseName', async (req, res) => {
         // remove cached pngs
         for (const folder of [letterCache, legalCache]) {
             const files = await fsPromise.readdir(folder);
-            await Promise.all(files.filter(f => f.startsWith(baseName + '-')).map(f => fsPromise.unlink(path.join(folder, f)).catch(()=>{})));
+            // FIX 3: Check for both baseName_ and baseName- prefixes for cleanup
+            await Promise.all(files.filter(f => f.startsWith(baseName + '_') || f.startsWith(baseName + '-')).map(f => fsPromise.unlink(path.join(folder, f)).catch(()=>{})));
         }
         // remove resized pdfs if present
         const letterPDF = path.join(uploadsDir, baseName + '_letter.pdf');
@@ -262,11 +266,11 @@ app.post('/upload', async (req, res) => {
             resizePDF(uploadedPath, legalPDF, 612, 1008)
         ]);
 
-        // Convert to PNG images with pdftoppm
+        // Convert to PNG images with Ghostscript
 	const letterPngPaths = await convertPdfToPngsWithGhostscript(letterPDF, letterCache, baseName);
 	const legalPngPaths = await convertPdfToPngsWithGhostscript(legalPDF, legalCache, baseName);
         // return web paths (relative to server)
-        const letterImages = letterPngPaths.map(p => '/cache/letter/' + path.basename(p));
+	const letterImages = letterPngPaths.map(p => '/cache/letter/' + path.basename(p));
         const legalImages = legalPngPaths.map(p => '/cache/legal/' + path.basename(p));
 
         // Optionally remove the original uploaded file (to save space)
@@ -303,14 +307,19 @@ app.post('/calculate-cost', async (req, res) => {
         const files = await fsPromise.readdir(dir);
         // match file numbers present in selectedPages
         const matched = files
-            .filter(f => f.startsWith(baseName + '-'))
+            .filter(f => f.startsWith(baseName + '_')) 
             .filter(f => {
-                const pg = Number(f.replace(baseName + '-', '').replace('.png',''));
+                // 2. Extract page number using the correct prefix: baseName + '_'
+                const pageNumStr = f.replace(baseName + '_', '').replace('.png','');
+                
+                // 3. Convert to number and check against selectedPages
+                const pg = Number(pageNumStr);
                 return selectedPages.includes(pg);
             })
             .sort((a,b) => {
-                const na = Number(a.replace(baseName + '-', '').replace('.png',''));
-                const nb = Number(b.replace(baseName + '-', '').replace('.png',''));
+                // Sorting logic also needs to be updated for the correct prefix
+                const na = Number(a.replace(baseName + '_', '').replace('.png',''));
+                const nb = Number(b.replace(baseName + '_', '').replace('.png',''));
                 return na - nb;
             });
 
@@ -325,9 +334,15 @@ app.post('/calculate-cost', async (req, res) => {
             totalUsedSections += used;
         }
 
-        const baseCost = (color === 'color') ? 10 : 5;
+	const baseCost = (color === 'color') ? 10 : 5;
         const totalPages = matched.length;
-        const totalCost = Math.round((baseCost * totalPages + totalUsedSections * 0.5) * Number(copies || 1));
+        
+        // FIX: Calculate section charge based on color mode.
+        // The charge is only applied if color is 'color'. Otherwise, it is 0.
+        const sectionCharge = (color === 'color') ? totalUsedSections * 0.5 : 0;
+        
+        // Update total cost calculation to use the conditional sectionCharge
+        const totalCost = Math.round((baseCost * totalPages + sectionCharge) * Number(copies || 1));
 
         return res.json({ success: true, totalCost, usedSections: totalUsedSections, totalPages });
 
@@ -414,6 +429,5 @@ app.use((err, req, res, next) => {
 });
 
 // start server (bind 0.0.0.0 so other devices on network can access captive portal)
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
-
