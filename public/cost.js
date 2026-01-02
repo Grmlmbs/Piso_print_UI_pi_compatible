@@ -47,29 +47,6 @@ document.getElementById("payment").addEventListener("input", function () {
     }
 });
 
-// HELPER FUNCTION FOR CLEANUP 
-async function terminateSession() {
-	try {
-		const response = await fetch("/end-session", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ baseName })
-		});
-		const result = await response.json();
-		
-		if(result.success) {
-			// Show a final overly or status
-			document.body.innerHTML = `
-				<div style = "text-align:center; padding: 50px;">
-					<h1>Thank you!</h1>
-					<p>Your session has ended. You will be disconnect automatically.</p>
-				</div>`	
-		}	
-	} catch (e) {
-		console.log("Session cleanup triggered.");
-	}
-}
-
 // PRINT BUTTON
 document.getElementById("printBtn").addEventListener("click", async () => {
     const payment = Number(document.getElementById("payment").value);
@@ -92,8 +69,7 @@ document.getElementById("printBtn").addEventListener("click", async () => {
     const result = await response.json();
 
     if (result.success) {
-        alert("Print job processing... You will be disconnected shortly.");
-	await terminateSession(); // KICKS THE USER
+        alert("Print job processing...");
         window.location.href = "/index.html";
     }
 });
@@ -115,7 +91,5 @@ document.getElementById("cancelBtn").addEventListener("click", async () => {
     await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
 
     // Return to home
-    alert("Session cancelled. Disconnecting...");
-    await terminateSession(); // KICKS THE USER
     window.location.href = "/index.html";
 });

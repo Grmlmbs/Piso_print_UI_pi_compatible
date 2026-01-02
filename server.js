@@ -186,9 +186,13 @@ async function scanUsedSections(filePath) {
                 const r = rawBuffer[idx];
                 const g = rawBuffer[idx + 1];
                 const b = rawBuffer[idx + 2];
-
-                // if not grayscale (r == g == b) then there's color/ink (used)
-                if (!(r === g && g === b)) {
+		
+		const diffRG = Math.abs(r - g);
+		const diffGB = Math.abs(g - b);
+		const diffRB = Math.abs(r - b);
+		
+                // if there the difference in color is to high, then there's color/ink (used)
+                if (diffRG > 15 || diffGB > 15 || diffRB > 15) {
                     used = true;
                     break;
                 }
@@ -269,7 +273,15 @@ app.post('/upload', async (req, res) => {
         // Convert to PNG images with Ghostscript
 	const letterPngPaths = await convertPdfToPngsWithGhostscript(letterPDF, letterCache, baseName);
 	const legalPngPaths = await convertPdfToPngsWithGhostscript(legalPDF, legalCache, baseName);
-        // return web paths (relative to server)
+        
+	// Scan the first page of the letter cache to see if the file has a color
+	//const firstPagePath = letterPngPaths[0];
+	//const firstPageSelections = await scanUsedSections(firstPagePath);
+
+	// if any section in the first page has color, we suggest 'color' mode
+	//const detectedColor = (firstPageSections > 0) ? 'color' : 'bw';
+
+	// return web paths (relative to server)
 	const letterImages = letterPngPaths.map(p => '/cache/letter/' + path.basename(p));
         const legalImages = legalPngPaths.map(p => '/cache/legal/' + path.basename(p));
 
@@ -282,7 +294,8 @@ app.post('/upload', async (req, res) => {
             images: { letter: letterImages, legal: legalImages },
             totalPages,
             originalSize,
-            baseName
+            baseName,
+	    //detectedColor
         });
 
     } catch (err) {
@@ -355,10 +368,40 @@ app.post('/calculate-cost', async (req, res) => {
 // Transaction create
 app.post('/transaction/create', (req, res) => {
     try {
-        let { Date: dateString, Amount, Color, Pages, Copies, Paper_Size, File_Path, File_Size, Status } = req.body;
+        // 1. Extract everything from req.body once at the very beginning
+        // We use 'let' so we can modify Amount, Copies, and Status later in the logic
+        let { 
+            Date: dateString, 
+            Amount, 
+            Color, 
+            Pages, 
+            Copies, 
+            Paper_Size, 
+            File_Path, 
+            File_Size, 
+            Status 
+        } = req.body;
 
+        // 2. Safety check: Count the pages using the 'Pages' variable declared above
+        // Fixed: changed p = p.trim() to p => p.trim()
+        const numCopies = Math.max(1, Math.floor(Number(Copies) || 1));
+        Copies = numCopies;
+        const pageList = (Pages || "").split(',').filter(p => p.trim() !== "");
+        
+        const totalSheets = pageList.length * numCopies;
+        
+        if (totalSheets > 5) {
+            return res.status(400).json({
+                success: false,
+                message: "Transaction rejected: Maximum 5 pages allowed."
+            });
+        }
+
+        // 3. Validation Logic
         if (!dateString || isNaN(new Date(dateString))) return res.json({ success: false, message: "Invalid date." });
-        Amount = Number(Amount); Copies = Number(Copies);
+        
+        Amount = Number(Amount); 
+        Copies = Number(Copies);
         if (isNaN(Amount) || Amount < 0) Amount = 0;
         if (isNaN(Copies) || Copies < 1) return res.json({ success: false, message: "Invalid number of copies." });
 
@@ -366,13 +409,16 @@ app.post('/transaction/create', (req, res) => {
         if (!allowedColors.includes(Color)) return res.json({ success: false, message: "Invalid color selection." });
 
         if (typeof Pages !== "string" || !Pages.match(/^[0-9,\-\s]+$/)) return res.json({ success: false, message: "Invalid page selection." });
+        
         const allowedSizes = ["letter", "legal"];
         if (!allowedSizes.includes(Paper_Size)) return res.json({ success: false, message: "Invalid paper size." });
+        
         if (typeof File_Path !== "string" || File_Path.length > 200) return res.json({ success: false, message: "Invalid file path." });
 
         const allowedStatuses = ["pending", "printing", "completed", "cancelled"];
         if (!allowedStatuses.includes(Status)) Status = "pending";
 
+        // 4. Database Transaction
         const createTx = db.transaction(() => {
             const stmt = db.prepare(`
                 INSERT INTO Transactions
@@ -426,48 +472,6 @@ app.use((err, req, res, next) => {
         return res.status(500).json({ success: false, message: 'Server error during upload.' });
     }
     next();
-});
-
-//Route to force-clear the session and the DHCP lease
-app.post('/end-session', async (req, res) => {
-	const { baseName } = req.body;
-	
-	try {
-		// 1. Clean up files first
-		if (baseName) {
-			const cleanBase = String(baseName).replace(/[^a-zA-Z0-9_\-]/g, '');
-			for (const folder of [letterCache, legalCache]) {
-				const files = await fsPromise.readdir(folder);
-				await Promise.all(files
-					.filter(f => f.startsWith(cleanBase))
-					.map(f => fsPromise.unlink(path.join(folder, f)).catch(()=>{}))
-				);
-			}
-		}
-		// 2. Send the response FIRST, then restart the network
-		res.json({ success: true, message: "Session ending, disconnecting..." });
-
-		// 3. Clear DHCP Lease and restart dnsmasq
-		// truncate -s 0 empties the file immediately
-
-		setTimeout(() => {
-		const clearLeaseCmd = 'sudo truncate -s 0 /var/lib/misc/dnsmasq.leases && sudo systemctl restart dnsmasq';
-		
-			exec(clearLeaseCmd, (err) => {
-				if (err) {
-					console.error("Dnsmasq restart failed:", err);
-					return;
-				} 
-				console.log(`Session ended for ${baseName}. Hostpot refreshed.`);
-			});
-		} , 2000); // 2000ms delay
-
-	} catch (err) {
-		console.error("End session error:", err);
-		if (!res.headerSent) {
-			res.status(500).json({ success: false });
-		}
-	}
 });
 
 // start server (bind 0.0.0.0 so other devices on network can access captive portal)

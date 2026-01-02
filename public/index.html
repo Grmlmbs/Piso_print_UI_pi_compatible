@@ -31,8 +31,8 @@
                     <div class="setting-row">
                         <label for="color">Color:</label>
                         <select id="color" name="color">
-                            <option value="bw">Black & White</option>
-                            <option value="color" selected>Colored</option>
+                            <option value="bw" selected>Black & White</option>
+                            <option value="color">Colored</option>
                         </select>
                     </div>
 
@@ -52,7 +52,7 @@
 
                     <div class="setting-row">
                         <label for="copies">Copies:</label>
-                        <input type="number" id="copies" min="1" max="10" value="1" required>
+                        <input type="number" id="copies" min="1" max="5" step="1" value="1" required>
                     </div>
 
                     <div class="setting-row">
@@ -63,7 +63,8 @@
                         </select>
                     </div>
                 </div>
-
+                <div id="limit-warning" style="color: #d9534f; font-weight: bold; margin-bottom: 10px; display: none; font-size: 0.9em;"></div>
+                
                 <div class="buttons">
                     <button type="button" id="proceedBtn">Proceed</button>
                     <button type="button" id="clearBtn">Clear</button>

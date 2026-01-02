@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================
     // RESET FORM
     // =========================
-    async function resetForm() {
+async function resetForm() {
         form.reset();
         preview.innerHTML = "";
 
@@ -74,19 +74,26 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Disable settings and clear pageInput explicitly
         setSettingsDisabledState(true);
-        pagesInput.value = ""; // Clear custom input after reset
+        pagesInput.value = ""; 
+
+        // Force defaults
+        colorSelect.value = "bw"; 
+        paperSelect.value = "letter";
+        
+        // Notify the UI to refresh based on these defaults
+        colorSelect.dispatchEvent(new Event('change'));
+        paperSelect.dispatchEvent(new Event('change'));
 
         if (lastUploadedBaseName) {
             try {
                 const res = await fetch(`/delete-last/${lastUploadedBaseName}`, {
                     method: "DELETE"
                 });
-
-                console.log("Deleted previous files:", await res.json());
+                const result = await res.json();
+                console.log("Deleted previous files:", result);
             } catch (err) {
                 console.error("Delete error:", err);
             }
-
             lastUploadedBaseName = null;
         }
     }
@@ -102,9 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function parsePageSelection(input, totalPages) {
         if (!input) return [];
 
-        const ranges = input.split(",").map(s => s.trim());
+        const ranges = input.split(",").map(s => s.trim()).filter(s => s !== "");
         const pages = new Set();
-        const correctedParts = [];
 
         for (let part of ranges) {
             if (/^\d+-\d+$/.test(part)) {
@@ -115,18 +121,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (start > end) [start, end] = [end, start];
 
                 for (let i = start; i <= end; i++) pages.add(i);
-                correctedParts.push(`${start}-${end}`);
             }
 
             else if (/^\d+$/.test(part)) {
                 let num = Math.max(1, Math.min(Number(part), totalPages));
                 pages.add(num);
-                correctedParts.push(String(num));
             }
         }
 
-        pagesInput.value = correctedParts.join(", ");
-        return [...pages];
+        //pagesInput.value = correctedParts.join(", ");
+        return [...pages].sort((a, b) => a - b);
     }
 
     function getSelectedPages() {
@@ -175,6 +179,57 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updatePreview() {
+        
+        // Force the input value to be a whole number immediately
+        if (copiesInput.value.includes(".")) {
+            copiesInput.value = Math.floor(parseFloat(copiesInput.value) || 1);
+        }
+        
+        const selectedPages = getSelectedPages();
+        const numCopies = Math.max(1, Math.floor(parseFloat(copiesInput.value) || 1));
+        const currentPaper = paperSelect.value;
+        const images = allPagesImages[currentPaper];
+        
+        // If user is halfway through typing (like "1-"), don't clear the preview yet
+        if (selectedPages.length === 0 && pageMode.value === "custom") {
+            return; // Exit and leave the previous preview visible until typing is valid.
+        }
+        
+        preview.innerHTML = "";
+        
+        selectedPages.forEach(pNum => {
+            const idx = pNum - 1;
+            if (images[idx]) {
+                const img = document.createElement("img");
+                img.src = images[idx];
+                img.classList.add("preview-thumb");
+                if (colorSelect.value === "bw") {
+                    img.style.filter = "grayscale(100%)";
+                }
+                preview.appendChild(img);
+            }
+        });
+        
+        const imageCount = preview.querySelectorAll("img").length * numCopies;
+        const limitWarning = document.getElementById("limit-warning");
+        
+        if (imageCount > 5) {
+            proceedBtn.disabled = true;
+            proceedBtn.style.opacity = "0.5";
+            proceedBtn.style.cursor = "not-allowed";
+            
+            if (limitWarning) {
+                limitWarning.innerText = `Limit: 5 pages max. You have ${imageCount} selected.`;
+                limitWarning.style.display = "block";
+            }
+            
+        } else {
+            proceedBtn.disabled = false;
+            proceedBtn.style.opacity = "1";
+            //proceedBtn.style.cursor = "pointer";
+            if (limitWarning) limitWarning.style.display = "none";
+        }
+        /*
         if (!totalPages) return;
 
         const selectedPages = getSelectedPages();
@@ -188,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const colorMode = colorSelect.value;
 
         renderPreview(allPagesImages[currentPaper], selectedPages, colorMode);
+        */
     }
 
     // Live update handlers
@@ -217,10 +273,20 @@ document.addEventListener("DOMContentLoaded", () => {
             // 💡 FIX: Pass result.totalPages to the handler
             handlePreviewImages(result.images, result.totalPages); 
             
-            setSettingsDisabledState(false); 
+            setSettingsDisabledState(false);
+		
+	    // Auto select color mode
+	    if (result.detectedColor) {
+                console.log("SERVER DETECTED:", result.detectedColor);
+                colorSelect.value = result.detectedColor;
+                // This triggers the price calculation and UI refresh
+                colorSelect.dispatchEvent(new Event('change'));
+            }
 
+	    // Auto select paper size mode
             if (["letter", "legal"].includes(result.originalSize)) {
                 paperSelect.value = result.originalSize;
+                paperSelect.dispatchEvent(new Event('change'));
             }
 
             updatePreview();
@@ -272,4 +338,23 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Error creating transaction.");
         }
     });
+    
+    copiesInput.addEventListener("keydown", (e) => {
+        if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+    copiesInput.addEventListener("paste", (e) => {
+        const pasteData = e.clipboardData.getData('text');
+        if (pasteData.includes(".") || pasteData.includes(",")) {
+            e.preventDefault();
+        }
+    });
+    copiesInput.addEventListener("blur", () => {
+        copiesINput.value = Math.floor(copiesInput.value) || 1;
+    });
+    pageMode.addEventListener("change", updatePreview);
+    pagesInput.addEventListener("input", updatePreview);
+    paperSelect.addEventListener("change", updatePreview);
+    
 }); // End of DOMContentLoaded listener
