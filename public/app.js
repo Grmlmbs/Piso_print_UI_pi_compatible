@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const paperSelect = document.getElementById("paperSize");
     const clearButton = document.getElementById("clearBtn");
     const proceedBtn = document.getElementById("proceedBtn");
+    const previewOverlay = document.getElementById("preview-overlay");
+    const overlayText = document.getElementById("overlay-text");
+    const loaderSpinner = document.getElementById("loader-spinner");
 
     // Elements to control for the disabled state
     const settingsElements = [
@@ -185,6 +188,10 @@ async function resetForm() {
             copiesInput.value = Math.floor(parseFloat(copiesInput.value) || 1);
         }
         
+        if (!form.classList.contains("uploading")) {
+            previewOverlay.classList.add("hidden");
+        }
+        
         const selectedPages = getSelectedPages();
         const numCopies = Math.max(1, Math.floor(parseFloat(copiesInput.value) || 1));
         const currentPaper = paperSelect.value;
@@ -195,7 +202,8 @@ async function resetForm() {
             return; // Exit and leave the previous preview visible until typing is valid.
         }
         
-        preview.innerHTML = "";
+        const oldImages = preview.querySelectorAll("img");
+        oldImages.forEach(img => img.remove());
         
         selectedPages.forEach(pNum => {
             const idx = pNum - 1;
@@ -215,18 +223,25 @@ async function resetForm() {
         
         if (imageCount > 5) {
             proceedBtn.disabled = true;
+            preview.classList.add("no-scroll");
+            // Show overlay with warning, but HIDE the spinner
+            previewOverlay.classList.remove("hidden");
+            loaderSpinner.style.display = "none";
+            overlayText.innerHTML = `<span style="color:red; font-weight:bold;">Limit Exceeded!</span><br>You have ${imageCount} pages/copies selected. <br>Please reduce to 5 or fewer.`;
             proceedBtn.style.opacity = "0.5";
-            proceedBtn.style.cursor = "not-allowed";
-            
+
             if (limitWarning) {
                 limitWarning.innerText = `Limit: 5 pages max. You have ${imageCount} selected.`;
                 limitWarning.style.display = "block";
             }
-            
         } else {
+            preview.classList.remove("no-scroll");
+            // Only hide the overlay if we aren't currently uploading
+            if (!form.classList.contains("uploading")) {
+                previewOverlay.classList.add("hidden");
+            }
             proceedBtn.disabled = false;
             proceedBtn.style.opacity = "1";
-            //proceedBtn.style.cursor = "pointer";
             if (limitWarning) limitWarning.style.display = "none";
         }
         /*
@@ -255,6 +270,17 @@ async function resetForm() {
     // =========================
     form.addEventListener("submit", async e => {
         e.preventDefault();
+        
+        // Show overlay and spinner
+        form.classList.add("uploading");
+        
+        const oldImages = preview.querySelectorAll("img");
+        oldImages.forEach(img => img.remove());
+        
+        previewOverlay.classList.remove("hidden");
+        loaderSpinner.style.display = "block";
+        overlayText.innerText = "Processing PDF...Please wait.";
+        //preview.innerHTML = "";
 
         const file = fileInput.files[0];
         if (!file) return alert("Please select a PDF.");
@@ -290,9 +316,13 @@ async function resetForm() {
             }
 
             updatePreview();
+            previewOverlay.classList.add("hidden");
         } catch (err) {
             console.error(err);
             alert("Upload error.");
+        } finally {
+            form.classList.remove("uploading");
+            previewOverlay.classList.add("hidden");
         }
     });
 
@@ -344,15 +374,50 @@ async function resetForm() {
             e.preventDefault();
         }
     });
+    
     copiesInput.addEventListener("paste", (e) => {
         const pasteData = e.clipboardData.getData('text');
         if (pasteData.includes(".") || pasteData.includes(",")) {
             e.preventDefault();
         }
     });
+    
     copiesInput.addEventListener("blur", () => {
-        copiesINput.value = Math.floor(copiesInput.value) || 1;
+        copiesInput.value = Math.floor(copiesInput.value) || 1;
     });
+    
+    // Clear the fields and preview whenever there were change of mind uploads
+    fileInput.addEventListener("change", () => {
+        // Clear the preview container
+        //preview.innerHTML = "";
+        const oldImages = preview.querySelectorAll("img");
+        oldImages.forEach(img => img.remove());
+        
+        // Reset the settings form to default values
+        // This resets color, pageMode, copies, and paperSize
+        const settingsForm = document.getElementById("settingsForm");
+        if (settingsForm) settingsForm.reset();
+        
+        // Explicitly handle UI-controlled states 
+        // Reset internal state variables
+        totalPages = 0;
+        allPagesImages = { letter: [], legal: [] };
+        lastUploadedBaseName = null;
+        
+        // Disable settings until the new file is uploaded
+        setSettingsDisabledState(true);
+        
+        // Hide the custom pages input wrapper
+        customWrapper.classList.remove("show");
+        pagesInput.value = "";
+        
+        // Hide any existing limit warnings
+        const limitWarning = document.getElementById("limit-warning");
+        if (limitWarning) limitWarning.style.display = "none";
+        
+        console.log("File changed: Settings reset and preview cleared.");
+    });
+    
     pageMode.addEventListener("change", updatePreview);
     pagesInput.addEventListener("input", updatePreview);
     paperSelect.addEventListener("change", updatePreview);

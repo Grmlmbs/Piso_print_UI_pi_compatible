@@ -16,7 +16,14 @@
             <form id="uploadForm">
                 <input type="file" name="pdfFile" accept="application/pdf" required />
                 <button type="submit">Upload PDF</button>
-                <div id="preview"></div>
+                <div id="preview">
+                    <div id="preview-overlay" class="hidden">
+                        <div class="overlay-content">
+                            <div id="loader-spinner" class="spinner"></div>
+                            <p id="overlay-text">Processing PDF...</p>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
 

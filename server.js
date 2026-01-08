@@ -132,6 +132,31 @@ async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
     for (const page of pages) {
         
         const embeddedPage = await newPdfDoc.embedPage(page);
+        
+        // GEt size and add "Safety Guards" to prevent NaN
+        const origW = embeddedPage.width || 1;
+        const origH = embeddedPage.height || 1;
+        
+        // Use the same scale for both X and Y to prevent stretching
+        const scale = Math.min(targetWidth / origW, targetHeight / origH);
+        
+        const newW = origW * scale;
+        const newH = origH * scale;
+        
+        // Calculate offsets to center the content on the white page
+        const xOffset = (targetWidth - newW) / 2;
+        const yOffset = targetHeight - newH;
+        
+        const newPage = newPdfDoc.addPage([targetWidth, targetHeight]);
+        
+        newPage.drawPage(embeddedPage, {
+            x: xOffset,
+            y: yOffset,
+            width: newW,
+            height: newH,
+        });
+        /*
+        const embeddedPage = await newPdfDoc.embedPage(page);
 
         // 1. Get size and sanitize
         const { width, height } = embeddedPage.size;
@@ -158,8 +183,9 @@ async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
             height: safeHeight * scaleY, // Will equal targetHeight
         });
         // --- END SQUISHED FIX ---
+        */
     }
-
+    
     const pdfBytes = await newPdfDoc.save();
     await fsPromise.writeFile(outputPath, pdfBytes);
 }
@@ -462,6 +488,31 @@ app.post('/transaction/update', (req, res) => {
         res.json({ success: false, message: err.message });
     }
 });
+
+app.post('/print-job', async (req, res) => {
+    try {
+        const { baseName, pages, copies, color, paper } = req.body;
+        
+        // Find the correct resized PDF in the uploads folder
+        const pdfPath = path.join(uploadsDir, `${baseName}_${paper}.pdf`);
+        
+        if (!fs.existsSync(pdfPath)) {
+            return res.json({ success: false, message: "Print file not found." });
+        }
+
+        // CUPS Command: -n (copies), -o page-ranges (pages), -d (printer name)
+        // Adjust '-d' to your actual printer name (e.g., Canon_TS207)
+        const printCmd = `lp -d PDF -n ${copies} -o page-ranges=${pages} "${pdfPath}"`;
+        
+        await execPromise(printCmd);
+        res.json({ success: true });
+
+    } catch (err) {
+        console.error('Print job error:', err);
+        res.json({ success: false, message: "CUPS Error: " + err.message });
+    }
+});
+
 // Global Error Handler (Crucial for catching Multer errors)
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {

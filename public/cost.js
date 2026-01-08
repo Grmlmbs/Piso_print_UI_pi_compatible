@@ -48,6 +48,7 @@ document.getElementById("payment").addEventListener("input", function () {
 });
 
 // PRINT BUTTON
+// cost.js - Corrected Print Button
 document.getElementById("printBtn").addEventListener("click", async () => {
     const payment = Number(document.getElementById("payment").value);
 
@@ -56,21 +57,38 @@ document.getElementById("printBtn").addEventListener("click", async () => {
         return;
     }
 
-    const response = await fetch("/transaction/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id,
-            Amount: totalCost,
-            Status: "printing"
-        })
-    });
+    try {
+        // 1. Trigger the actual CUPS Print Command
+        const printResponse = await fetch("/print-job", {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ baseName, pages, copies, color, paper })
+        });
 
-    const result = await response.json();
+        const printResult = await printResponse.json();
 
-    if (result.success) {
-        alert("Print job processing...");
-        window.location.href = "/index.html";
+        if (printResult.success) {
+            // 2. Update transaction (FIXED TYPO HERE: transaction, not transactoin)
+            const txResponse = await fetch("/transaction/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id,
+                    Amount: totalCost,
+                    Status: "completed"
+                })
+            });
+
+            const txResult = await txResponse.json();
+            if (txResult.success) {
+                alert("Printing started! Please wait.");
+                window.location.href = "/index.html";
+            }
+        } else {
+            alert("Printer Error: " + printResult.message);
+        }
+    } catch (err) {
+        console.error("Print Error:", err);
     }
 });
 
