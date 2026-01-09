@@ -499,10 +499,26 @@ app.post('/print-job', async (req, res) => {
         if (!fs.existsSync(pdfPath)) {
             return res.json({ success: false, message: "Print file not found." });
         }
-
+        
+        // Set the color mode
+        let colorOpt = "";
+        if (color === "bw") {
+            colorOpt = "-o ColorModel=Gray";
+        } else {
+            colorOpt = "-o ColorModel=RGB";
+        }
+        
+        // Set the Media (Paper Size) option
+        let mediaOpt = "";
+        if (paper === "legal") {
+            mediaOpt = "-o media=legal";
+        } else {
+            mediaOpt = "-o media=Letter.Borderless";
+        }
+        
         // CUPS Command: -n (copies), -o page-ranges (pages), -d (printer name)
         // Adjust '-d' to your actual printer name (e.g., Canon_TS207)
-        const printCmd = `lp -d PDF -n ${copies} -o page-ranges=${pages} "${pdfPath}"`;
+        const printCmd = `lp -d Canon_TS200_series_USB -n ${copies} ${colorOpt} ${mediaOpt} -o page-ranges=${pages} "${pdfPath}"`;
         
         await execPromise(printCmd);
         res.json({ success: true });

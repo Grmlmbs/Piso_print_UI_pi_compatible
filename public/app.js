@@ -112,9 +112,44 @@ async function resetForm() {
     function parsePageSelection(input, totalPages) {
         if (!input) return [];
 
-        const ranges = input.split(",").map(s => s.trim()).filter(s => s !== "");
+        //const ranges = input.split(",").map(s => s.trim()).filter(s => s !== "");
         const pages = new Set();
-
+        const parts = input.split(",");
+        
+        parts.forEach(part => {
+            part = part.trim();
+            
+            //Handle Ranges (e.g., 1-3)
+            if (part.includes("-")) {
+                const rangeParts = part.split("-");
+                if (rangeParts.length === 2) {
+                    let start = parseInt(rangeParts[0]);
+                    let end = parseInt(rangeParts[1]);
+                    
+                    if (!isNaN(start) && !isNaN(end)) {
+                        // Keep values within 1 and the ttal page count
+                        const s = Math.max(1, Math.min(start, totalPages));
+                        const e = Math.max(1, Math.min(end, totalPages));
+                        const realStart = Math.min(s, e);
+                        const realEnd = Math.max(s, e);
+                        
+                        for (let i = realStart; i <= realEnd; i++) {
+                            pages.add(i);
+                        }
+                    }
+                }
+            }
+            // Handle Single Numbers (e.g., 5)
+            else {
+                const num = parseInt(part);
+                if (!isNaN(num) && num >= 1 && num <= totalPages) {
+                    pages.add(num);
+                }
+            }
+        });
+        return Array.from(pages).sort((a, b) => a - b);
+            
+        /*
         for (let part of ranges) {
             if (/^\d+-\d+$/.test(part)) {
                 let [start, end] = part.split("-").map(Number);
@@ -134,6 +169,7 @@ async function resetForm() {
 
         //pagesInput.value = correctedParts.join(", ");
         return [...pages].sort((a, b) => a - b);
+        */
     }
 
     function getSelectedPages() {
@@ -181,85 +217,80 @@ async function resetForm() {
         });
     }
 
-    function updatePreview() {
-        
-        // Force the input value to be a whole number immediately
-        if (copiesInput.value.includes(".")) {
-            copiesInput.value = Math.floor(parseFloat(copiesInput.value) || 1);
+function updatePreview() {
+    // 1. Sanitize input
+    if (copiesInput.value.includes(".")) {
+        copiesInput.value = Math.floor(parseFloat(copiesInput.value) || 1);
+    }
+    
+    const selectedPages = getSelectedPages();
+    const numCopies = Math.max(1, Math.floor(parseFloat(copiesInput.value) || 1));
+    const totalItemsToPrint = selectedPages.length * numCopies;
+    
+    // 2. DRAW IMAGES FIRST
+    const currentPaper = paperSelect.value;
+    const images = allPagesImages[currentPaper];
+    
+    if (selectedPages.length === 0 && pageMode.value === "custom") {
+        // Don't clear preview if user is mid-typing
+        return; 
+    }
+
+    const oldImages = preview.querySelectorAll("img");
+    oldImages.forEach(img => img.remove());
+    
+    selectedPages.forEach(pNum => {
+        const idx = pNum - 1;
+        if (images[idx]) {
+            const img = document.createElement("img");
+            img.src = images[idx];
+            img.classList.add("preview-thumb");
+            if (colorSelect.value === "bw") img.style.filter = "grayscale(100%)";
+            preview.appendChild(img);
         }
+    });
+
+    // 3. SHOW WARNINGS LAST
+    const limitWarning = document.getElementById("limit-warning");
+    
+    // Check if current selection exceeds limit OR if it's a fresh upload > 5 pages
+    if (totalItemsToPrint > 5 || (totalPages > 5 && selectedPages.length === 0)) {
+        
+        preview.classList.add("no-scroll");
+        preview.scrollTop = 0;
+        
+        proceedBtn.disabled = true;
+        proceedBtn.style.opacity = "0.5";
+        
+        // Ensure overlay is visible and spinner is hidden
+        previewOverlay.classList.remove("hidden");
+        loaderSpinner.style.display = "none";
+
+        let message = `Limit Exceeded! Selection: ${totalItemsToPrint}. Max: 5.`;
+        if (totalPages > 5 && selectedPages.length === 0) {
+            message = `File Too Large! This file has ${totalPages} pages. Use 'Custom' to select 5 or fewer.`;
+        }
+
+        overlayText.innerHTML = `<span style="color:red; font-weight:bold;">Limit Exceeded!</span><br>` +
+                                `You have ${totalItemsToPrint} pages/copies selected.<br>` +
+                                `Please reduce to 5 or fewer.`;
+        
+        if (limitWarning) {
+            limitWarning.innerText = message;
+            limitWarning.style.display = "block";
+        }
+    } else {
+        // Only hide if we aren't currently BUSY with another upload
+        preview.classList.remove("no-scroll");
         
         if (!form.classList.contains("uploading")) {
             previewOverlay.classList.add("hidden");
-        }
-        
-        const selectedPages = getSelectedPages();
-        const numCopies = Math.max(1, Math.floor(parseFloat(copiesInput.value) || 1));
-        const currentPaper = paperSelect.value;
-        const images = allPagesImages[currentPaper];
-        
-        // If user is halfway through typing (like "1-"), don't clear the preview yet
-        if (selectedPages.length === 0 && pageMode.value === "custom") {
-            return; // Exit and leave the previous preview visible until typing is valid.
-        }
-        
-        const oldImages = preview.querySelectorAll("img");
-        oldImages.forEach(img => img.remove());
-        
-        selectedPages.forEach(pNum => {
-            const idx = pNum - 1;
-            if (images[idx]) {
-                const img = document.createElement("img");
-                img.src = images[idx];
-                img.classList.add("preview-thumb");
-                if (colorSelect.value === "bw") {
-                    img.style.filter = "grayscale(100%)";
-                }
-                preview.appendChild(img);
-            }
-        });
-        
-        const imageCount = preview.querySelectorAll("img").length * numCopies;
-        const limitWarning = document.getElementById("limit-warning");
-        
-        if (imageCount > 5) {
-            proceedBtn.disabled = true;
-            preview.classList.add("no-scroll");
-            // Show overlay with warning, but HIDE the spinner
-            previewOverlay.classList.remove("hidden");
-            loaderSpinner.style.display = "none";
-            overlayText.innerHTML = `<span style="color:red; font-weight:bold;">Limit Exceeded!</span><br>You have ${imageCount} pages/copies selected. <br>Please reduce to 5 or fewer.`;
-            proceedBtn.style.opacity = "0.5";
-
-            if (limitWarning) {
-                limitWarning.innerText = `Limit: 5 pages max. You have ${imageCount} selected.`;
-                limitWarning.style.display = "block";
-            }
-        } else {
-            preview.classList.remove("no-scroll");
-            // Only hide the overlay if we aren't currently uploading
-            if (!form.classList.contains("uploading")) {
-                previewOverlay.classList.add("hidden");
-            }
             proceedBtn.disabled = false;
             proceedBtn.style.opacity = "1";
             if (limitWarning) limitWarning.style.display = "none";
         }
-        /*
-        if (!totalPages) return;
-
-        const selectedPages = getSelectedPages();
-        // 💡 CRITICAL: Only proceed if there are selected pages AND preview images exist
-        if (!selectedPages.length || allPagesImages[paperSelect.value]?.length === 0) {
-            renderPreview(null, selectedPages, colorSelect.value); // Render the "waiting" message
-            return;
-        }
-
-        const currentPaper = paperSelect.value;
-        const colorMode = colorSelect.value;
-
-        renderPreview(allPagesImages[currentPaper], selectedPages, colorMode);
-        */
     }
+}
 
     // Live update handlers
     [pagesInput, copiesInput].forEach(el => el.addEventListener("input", updatePreview));
@@ -268,63 +299,63 @@ async function resetForm() {
     // =========================
     // FILE UPLOAD HANDLER
     // =========================
-    form.addEventListener("submit", async e => {
-        e.preventDefault();
+   form.addEventListener("submit", async e => {
+    e.preventDefault();
+    
+    // 1. Setup UI for loading
+    form.classList.add("uploading");
+    const oldImages = preview.querySelectorAll("img");
+    oldImages.forEach(img => img.remove());
+    
+    previewOverlay.classList.remove("hidden");
+    loaderSpinner.style.display = "block";
+    overlayText.innerText = "Processing PDF...Please wait.";
+
+    const file = fileInput.files[0];
+    if (!file) return alert("Please select a PDF.");
+
+    const formData = new FormData();
+    formData.append("pdfFile", file);
+
+    try {
+        const response = await fetch("/upload", { method: "POST", body: formData });
+        const result = await response.json();
+
+        if (!result.success) return alert(result.message || "Upload failed.");
+
+        // 2. Set global data
+        lastUploadedBaseName = result.baseName;
+        totalPages = result.totalPages; // CRITICAL: Update global page count
+        handlePreviewImages(result.images, result.totalPages); 
         
-        // Show overlay and spinner
-        form.classList.add("uploading");
+        // 3. Clear the 'uploading' state BEFORE calling updatePreview
+        // This ensures updatePreview logic can control the overlay
+        form.classList.remove("uploading");
+
+        setSettingsDisabledState(false);
         
-        const oldImages = preview.querySelectorAll("img");
-        oldImages.forEach(img => img.remove());
-        
-        previewOverlay.classList.remove("hidden");
-        loaderSpinner.style.display = "block";
-        overlayText.innerText = "Processing PDF...Please wait.";
-        //preview.innerHTML = "";
-
-        const file = fileInput.files[0];
-        if (!file) return alert("Please select a PDF.");
-
-        const formData = new FormData();
-        formData.append("pdfFile", file);
-
-        try {
-            const response = await fetch("/upload", { method: "POST", body: formData });
-            const result = await response.json();
-
-            if (!result.success) return alert(result.message || "Upload failed.");
-
-            lastUploadedBaseName = result.baseName;
-            
-            // 💡 FIX: Pass result.totalPages to the handler
-            handlePreviewImages(result.images, result.totalPages); 
-            
-            setSettingsDisabledState(false);
-		
-	    // Auto select color mode
-	    if (result.detectedColor) {
-                console.log("SERVER DETECTED:", result.detectedColor);
-                colorSelect.value = result.detectedColor;
-                // This triggers the price calculation and UI refresh
-                colorSelect.dispatchEvent(new Event('change'));
-            }
-
-	    // Auto select paper size mode
-            if (["letter", "legal"].includes(result.originalSize)) {
-                paperSelect.value = result.originalSize;
-                paperSelect.dispatchEvent(new Event('change'));
-            }
-
-            updatePreview();
-            previewOverlay.classList.add("hidden");
-        } catch (err) {
-            console.error(err);
-            alert("Upload error.");
-        } finally {
-            form.classList.remove("uploading");
-            previewOverlay.classList.add("hidden");
+        // Auto select color mode
+        if (result.detectedColor) {
+            colorSelect.value = result.detectedColor;
         }
-    });
+
+        // Auto select paper size mode
+        if (["letter", "legal"].includes(result.originalSize)) {
+            paperSelect.value = result.originalSize;
+        }
+
+        // 4. TRIGGER FINAL UI CHECK
+        // This will now show the thumbnails AND the warning if > 5 pages
+        updatePreview();
+
+    } catch (err) {
+        console.error(err);
+        alert("Upload error.");
+        // If it failed, we should hide the overlay
+        previewOverlay.classList.add("hidden");
+        form.classList.remove("uploading");
+    }
+});
 
     // =========================
     // PROCEED BUTTON
@@ -415,11 +446,21 @@ async function resetForm() {
         const limitWarning = document.getElementById("limit-warning");
         if (limitWarning) limitWarning.style.display = "none";
         
-        console.log("File changed: Settings reset and preview cleared.");
+        previewOverlay.classList.add("hidden");
+        overlayText.innerHTML = "Processing PDF...Please wait.";
+        
+        console.log("File changed: Settings reset and preview cleared.")
     });
     
     pageMode.addEventListener("change", updatePreview);
-    pagesInput.addEventListener("input", updatePreview);
+    
+    pagesInput.addEventListener("input", (e) => {
+        // Remove any character that isn't a digit, comma, or hyphen
+        e.target.value = e.target.value.replace(/[^0-9,-]/g, "");
+        updatePreview();
+    });
+    
+    
     paperSelect.addEventListener("change", updatePreview);
     
 }); // End of DOMContentLoaded listener
