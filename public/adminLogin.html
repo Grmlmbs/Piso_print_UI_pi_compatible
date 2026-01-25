@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Admin Login</title>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body class="admin-body"> 
+	<div class="login-box">
+		<h2>Admin Access</h2>
+		<input type="text" id="username" placeholder = "Username">
+		<div class="password-container">
+			<input type="password" id="password" placeholder="Password">
+			<label for ="togglePassword" class="icon-label">
+				<img src="/sources/show.png" id="eyeIcon" alt="Toggle Password" width="25">
+			</label>
+			<input type="checkbox" id="togglePassword" style="display: none;">
+		</div>
+		<button onclick="handleLogin()">Login</button>
+	</div>
+	<div id="loading-overlay" style="display: none;">
+		<div class="spinner"></div>
+		<p id="loding-text">Verifying Credentials...</p>
+	</div>
+	
+	<script src="/loading.js"></script>
+	<script src="/admin.js"></script>
+</body>
+</html>

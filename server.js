@@ -55,6 +55,29 @@ app.use(express.static(path.join(root, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/cache', express.static(cacheDir));
 
+// ------CODES FOR THE LANDING PAGE-------
+// Serve Login Route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
+const bcrypt = require('bcrypt');
+
+app.post('/admin/login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    try {
+        const admin = db.prepare('SELECT * FROM Admins WHERE username = ?').get(username);
+        if (admin && await bcrypt.compare(password, admin.password)) {
+            res.json({ success: true, redirect: '/adminDashboard.html' });
+        } else {
+            res.json({ success: false, message: 'invalid username or password' });
+        }
+    } catch {
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 // ----- Helpers -----
 const clearCache = async (folder) => {
     try {

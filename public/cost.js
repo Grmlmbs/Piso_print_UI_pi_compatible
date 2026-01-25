@@ -39,11 +39,18 @@ calculateCost();
 document.getElementById("payment").addEventListener("input", function () {
     const payment = Number(this.value);
     const status = document.getElementById("status");
+    const printBtn = document.getElementById("printBtn");
 
     if (payment < totalCost) {
-        status.innerHTML = "<span style='color:red'>Underpayment</span>";
+        status.innerHTML = "Need ₱" + (totalCost - payment).toFixed(2) + " more";
+        status.style.color = "#d9534f"; // Red
+        printBtn.disabled = true;
+        printBtn.style.opacity = "0.5";
     } else {
-        status.innerHTML = "<span style='color:green'>Payment OK</span>";
+        status.innerHTML = "Ready to Print!";
+        status.style.color = "#28a745"; // Green
+        printBtn.disabled = false;
+        printBtn.style.opacity = "1";
     }
 });
 
@@ -82,7 +89,7 @@ document.getElementById("printBtn").addEventListener("click", async () => {
             const txResult = await txResponse.json();
             if (txResult.success) {
                 alert("Printing started! Please wait.");
-                window.location.href = "/index.html";
+                window.location.href = "/upload.html";
             }
         } else {
             alert("Printer Error: " + printResult.message);
@@ -109,5 +116,5 @@ document.getElementById("cancelBtn").addEventListener("click", async () => {
     await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
 
     // Return to home
-    window.location.href = "/index.html";
+    window.location.href = "/upload.html";
 });

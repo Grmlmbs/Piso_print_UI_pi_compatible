@@ -1,3 +1,226 @@
+/* COST PAGE STYLES */
+.cost-box {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.cost-action-area {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.cost-action-area button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+#printBtn {
+    background-color: #007bff;
+    color: white;
+}
+
+#cancelBtn {
+    background-color: #6c757d;
+    color: white;
+}
+
+#status {
+    margin: 10px 0;
+    font-weight: bold;
+    min-height: 1.2em;
+}
+
+.price-display h1 {
+    font-size: 3rem;
+    color: #28a745;
+    margin: 10px 0;
+}
+
+.details-list {
+    text-align: left;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.details-list p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+.payment-section label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+#payment {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+#cancelBtn {
+    background-color: #6c757d;
+}
+
+#cancelBtn:hover {
+    background-color: #5a6268;
+}
+
+/* ADMIN LOGIN STYLES */
+.admin-body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.login-box {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 350px;
+    text-align: center;
+}
+
+.login-box h2 {
+    margin-bottom: 20px;
+    color: #007bff;
+}
+
+.login-box input[type="text"],
+.login-box input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.login-box input:foxus {
+    border-color: #007bff;
+}
+
+.login-box button {
+    width:100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.login-box button:hover {
+    background-color: #0056b3;
+}
+
+.password-container {
+    position: relative;
+    width: 100%;
+}
+#password {
+    padding-right: 45px !important;
+}
+
+.icon-label {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+}
+
+#eyeIcon {
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+#eyeIcon:hover {
+    opacity: 1;
+}
+
+/* LANDING PAGE STYLES */
+#loading-overlay {
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%; 
+    background:rgba(255,255,255,0.8); 
+    z-index:9999; 
+    flex-direction:column; 
+    align-items:center; 
+    justify-content:center; 
+    backdrop-filter: blur(3px);
+}
+
+#loading-text {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.landing-container {
+    display: flex;
+    flex-direction:column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+}
+.btn-group {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+}
+.btn-main {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+.btn-admin {
+    background-color: #6c757d;
+}
+    
+
 /* RESET */
 * {
     box-sizing: border-box;

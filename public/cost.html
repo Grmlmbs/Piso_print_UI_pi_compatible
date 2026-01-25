@@ -5,38 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="admin-body">
+        <div class="cost-box"> <h2>Document Price</h2>
+            <div class="price-display">
+                <h1>₱<span id="cost">...</span></h1>
+            </div>
 
-    <div class="container">
-        <!-- LEFT SIDE: Cost Info -->
-        <div class="preview-container">
-            <h1>Document Price</h1>
+            <div class="details-list">
+                <p><strong>Color:</strong> <span id="color"></span></p>
+                <p><strong>Pages:</strong> <span id="pages"></span></p>
+                <p><strong>Copies:</strong> <span id="copies"></span></p>
+                <p><strong>Paper:</strong> <span id="paper"></span></p>
+            </div>
 
-            <div id="box">
-                <br>
-                <h1><b>Price: ₱</b><span id="cost">Calculating...</span></h1>
-                <br>
-                <h3>Details:</h3>
-                <hr>
-                <p><b>Color:</b> <span id="color"></span></p>
-                <p><b>Pages Selected:</b> <span id="pages"></span></p>
-                <p><b>Copies:</b> <span id="copies"></span></p>
-                <p><b>Paper Size:</b> <span id="paper"></span></p>
-                <br>
-                <hr>
+            <hr>
 
-                <label for="payment">Enter Payment:</label><br>
-                <input type="number" id="payment" min="0"><br>
-
+            <div class="payment-section">
+                <label for="payment">Enter Payment Amount:</label>
+                <input type="number" id="payment" min="0" placeholder="0.00">
                 <p id="status"></p>
+            </div>
 
-                <div class="buttons" id="priceBtns">
-                    <button id="printBtn">Print</button>
-                    <button id="cancelBtn">Cancel</button>
-                </div>
+            <div class="cost-action-area">
+                <button id="printBtn">Print Now</button>
+                <button id="cancelBtn" class="btn-admin">Cancel</button>
             </div>
         </div>
-    </div>
 
 <script src="cost.js"></script>
 </body>
