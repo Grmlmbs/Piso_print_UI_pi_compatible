@@ -21,3 +21,10 @@ function startKiosk() {
 function goToAdmin() {
 	window.location.href = "/adminLogin.html";
 }
+
+function hideLoading() {
+	const overlay = document.getElementById('loading-overlay');
+	if (overlay) {
+		overlay.style.dipslay = 'none';
+	}
+}

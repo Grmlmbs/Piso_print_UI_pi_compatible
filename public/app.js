@@ -367,6 +367,11 @@ function updatePreview() {
         // The check remains, but now totalPages should be correct
         if (!selectedPages.length) return alert("Select pages first."); 
 
+        if (typeof showLoading === "function") {
+            showLoading("Creating transaction and calculating costs...");
+        }
+        
+        setTimeout(async () => {
         const data = {
             Date: new Date().toISOString(),
             Amount: 0,
@@ -387,8 +392,11 @@ function updatePreview() {
             });
 
             const result = await response.json();
-            if (!result.success) return alert(result.message || "Transaction failed.");
-
+            if (!result.success) {
+                hideLoading();
+                return alert(result.message || "Transaction failed.");
+            }
+            
             const query =
                 `?id=${result.id}&pages=${data.Pages}&copies=${data.Copies}` +
                 `&color=${data.Color}&paper=${data.Paper_Size}&baseName=${data.File_Path}`;
@@ -396,8 +404,10 @@ function updatePreview() {
             window.location.href = `/cost.html${query}`;
         } catch (err) {
             console.error(err);
+            hideLoading();
             alert("Error creating transaction.");
         }
+    }, 500);
     });
     
     copiesInput.addEventListener("keydown", (e) => {

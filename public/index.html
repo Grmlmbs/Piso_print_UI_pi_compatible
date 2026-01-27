@@ -21,6 +21,20 @@
 		</div>
 	</div>
 	
+	<h1 id="balance-display">Credits: 0</h1>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		const socket = io();
+		const display = document.getElementById('balance-display');
+
+			// Listen for the 'update_balance' message from the Pi
+			socket.on('update_balance', (newBalance) => {
+			display.innerText = "Credits: " + newBalance;
+			alert("Coin detected! You now have " + newBalance + " credits.");
+		});
+	</script>
+	
 	<script src="/loading.js"></script>
 	<script src="/landing.js"></script>
 </body>

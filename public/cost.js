@@ -63,7 +63,11 @@ document.getElementById("printBtn").addEventListener("click", async () => {
         alert("Payment not enough!");
         return;
     }
-
+    
+    if(typeof showLoading === "function") {
+        showLoading("Sending document to printer...");
+    }
+    
     try {
         // 1. Trigger the actual CUPS Print Command
         const printResponse = await fetch("/print-job", {
@@ -85,36 +89,54 @@ document.getElementById("printBtn").addEventListener("click", async () => {
                     Status: "completed"
                 })
             });
-
             const txResult = await txResponse.json();
             if (txResult.success) {
                 alert("Printing started! Please wait.");
                 window.location.href = "/upload.html";
             }
+            
+            setTimeout(() => {
+                window.location.href = "/upload.html";
+            }, 1500);
+            
         } else {
+            hideLoading();
             alert("Printer Error: " + printResult.message);
         }
     } catch (err) {
         console.error("Print Error:", err);
+        hideLoading();
+        alert("Failed to reach printer server.");
     }
 });
 
 // CANCEL BUTTON
 document.getElementById("cancelBtn").addEventListener("click", async () => {
-    // Update transaction as CANCELLED
-    await fetch("/transaction/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            id,
-            Amount: 0,
-            Status: "cancelled"
-        })
-    });
+    // Show laoding overlay
+    
+    if (typeof showLoading === "function") {
+        showLoading("Cancelling transaction...");
+    }
+    
+    try {
+        // Update transaction as CANCELLED
+        await fetch("/transaction/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id,
+                Amount: 0,
+                Status: "cancelled"
+            })
+        });
 
-    // Delete uploaded PDFs/images
-    await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
+        // Delete uploaded PDFs/images
+        await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
 
-    // Return to home
-    window.location.href = "/upload.html";
+        // Return to home
+        window.location.href = "/upload.html";
+    } catch (err) {
+        console.error("Cancel Error:", err);
+        window.location.href = "/upload.html";
+    }
 });

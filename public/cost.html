@@ -13,15 +13,15 @@
 
             <div class="details-list">
                 <p><strong>Color:</strong> <span id="color"></span></p>
-                <p><strong>Pages:</strong> <span id="pages"></span></p>
-                <p><strong>Copies:</strong> <span id="copies"></span></p>
-                <p><strong>Paper:</strong> <span id="paper"></span></p>
+                <p><strong>List of pages:</strong> <span id="pages"></span></p>
+                <p><strong>No. of copies:</strong> <span id="copies"></span></p>
+                <p><strong>Paper size:</strong> <span id="paper"></span></p>
             </div>
 
             <hr>
 
             <div class="payment-section">
-                <label for="payment">Enter Payment Amount:</label>
+                <label for="payment">Inserted Coin:</label>
                 <input type="number" id="payment" min="0" placeholder="0.00">
                 <p id="status"></p>
             </div>
@@ -31,7 +31,11 @@
                 <button id="cancelBtn" class="btn-admin">Cancel</button>
             </div>
         </div>
-
+        <div id="loading-overlay" style="display: none;">
+			<div class="spinner"></div>
+			<p id="loading-text">Loading...</p>		
+		</div>
+<script src="/loading.js"></script>
 <script src="cost.js"></script>
 </body>
 </html>

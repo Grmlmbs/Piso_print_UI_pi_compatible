@@ -11,8 +11,14 @@ const sharp = require('sharp');
 const { exec } = require('child_process');
 const db = require('./db');
 const execPromise = promisify(exec);
+const http = require('http');
+const { Server } = require('socket.io');
+const { SerialPort } = require('serialport');
+const { ReadlineParser } = require('@serialport/parser-readline');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 app.use(express.json());
 
 // DB pragmas (if using better-sqlite3 wrapper that supports pragma)
@@ -564,6 +570,32 @@ app.use((err, req, res, next) => {
     next();
 });
 
-// start server (bind 0.0.0.0 so other devices on network can access captive portal)
+app.post('/balance/reset', (req, res) => {
+    userBalance = 0;
+    io.emit('update_balance', 0);
+    res.json({ success: true });
+});
+
+//coinSlot codes.
+
+const serialPort = new SerialPort({ path: '/dev/ttyUSB0', baudRate: 9600 });
+const parser = serialPort.pipe(new ReadlineParser({ delimiter: '\r\n' }));
+
+let userBalance = 0;
+
+parser.on('data', (data) => {
+    if (data.includes("COIN")) {
+        userBalance += 1; 
+        console.log("Coin inserted! New Balance:", userBalance);
+        
+        // Use userBalance consistently
+        io.emit('update_balance', userBalance);
+    }
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Kiosk System Live at http://192.168.5.1:${PORT}`);
+});
