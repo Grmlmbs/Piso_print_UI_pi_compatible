@@ -26,6 +26,9 @@
     cursor: pointer;
     transition: opacity 0.2s;
 }
+.cost-box h2 {
+    margin-top: 10px;
+}
 
 #printBtn {
     background-color: #007bff;
@@ -48,6 +51,10 @@
     color: #28a745;
     margin: 10px 0;
 }
+.inserted-amount h1 {
+    font-size: 3rem;
+    color: #d9534f;
+}
 
 .details-list {
     text-align: left;
@@ -67,6 +74,7 @@
 .payment-section label {
     display: block;
     margin-bottom: 5px;
+    margin-top: 5px;
     font-weight: bold;
     font-size: 0.9rem;
 }

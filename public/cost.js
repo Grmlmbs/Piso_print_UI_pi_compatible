@@ -13,7 +13,7 @@ document.getElementById("copies").innerText = copies;
 document.getElementById("color").innerText = color;
 document.getElementById("paper").innerText = paper;
 
-let totalCost = 0;
+let totalCost = null;
 
 // Ask server to scan images + calculate cost
 async function calculateCost() {
@@ -32,32 +32,13 @@ async function calculateCost() {
 
     totalCost = result.totalCost;
     document.getElementById("cost").innerText = totalCost;
+    updateUI();
 }
-calculateCost();
-
-// Payment validation
-document.getElementById("payment").addEventListener("input", function () {
-    const payment = Number(this.value);
-    const status = document.getElementById("status");
-    const printBtn = document.getElementById("printBtn");
-
-    if (payment < totalCost) {
-        status.innerHTML = "Need ₱" + (totalCost - payment).toFixed(2) + " more";
-        status.style.color = "#d9534f"; // Red
-        printBtn.disabled = true;
-        printBtn.style.opacity = "0.5";
-    } else {
-        status.innerHTML = "Ready to Print!";
-        status.style.color = "#28a745"; // Green
-        printBtn.disabled = false;
-        printBtn.style.opacity = "1";
-    }
-});
 
 // PRINT BUTTON
 // cost.js - Corrected Print Button
 document.getElementById("printBtn").addEventListener("click", async () => {
-    const payment = Number(document.getElementById("payment").value);
+    const payment = currentInserted;
 
     if (payment < totalCost) {
         alert("Payment not enough!");
@@ -91,6 +72,7 @@ document.getElementById("printBtn").addEventListener("click", async () => {
             });
             const txResult = await txResponse.json();
             if (txResult.success) {
+                await fetch("/balance/reset", { method: "POST" });
                 alert("Printing started! Please wait.");
                 window.location.href = "/upload.html";
             }
@@ -103,6 +85,14 @@ document.getElementById("printBtn").addEventListener("click", async () => {
             hideLoading();
             alert("Printer Error: " + printResult.message);
         }
+        
+        if (printResult.success) {
+        await fetch("/balance/reset", { method: "POST" });
+        
+        alert("Printing started! Please wait.");
+        window.location.href = "/upload.html";
+        }   
+        
     } catch (err) {
         console.error("Print Error:", err);
         hideLoading();
@@ -131,8 +121,9 @@ document.getElementById("cancelBtn").addEventListener("click", async () => {
         });
 
         // Delete uploaded PDFs/images
+        await fetch("/balance/reset", { method: "POST" });
         await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
-
+        
         // Return to home
         window.location.href = "/upload.html";
     } catch (err) {
@@ -140,3 +131,80 @@ document.getElementById("cancelBtn").addEventListener("click", async () => {
         window.location.href = "/upload.html";
     }
 });
+
+const socket = io(); 
+let currentInserted = 0;
+
+// 1. Listen for live coin updates from server.js
+socket.on('update_balance', (newBalance) => {
+    currentInserted = newBalance;
+    updateUI();
+});
+
+// Synce the balance on page load.
+async function syncBalance() {
+    try {
+        const response = await fetch('/balance/current');
+        if (response.ok) {
+            const data = await response.json();
+            currentInserted = data.balance;
+            updateUI();
+        }
+    } catch (err) {
+        console.error("Balance sync failed: ", err);
+    }
+}
+
+function updateUI() {
+    const balanceDisplay = document.getElementById("inserted-balance");
+    const status = document.getElementById("status");
+    const printBtn = document.getElementById("printBtn");
+
+    // Update the number on screen
+    if (balanceDisplay) {
+        balanceDisplay.innerText = currentInserted;
+    }
+    
+    if (totalCost === null || totalCost === 0) {
+        status.innerText = "Please insert coins.";
+        status.style.color = "#666"; 
+        printBtn.disabled = true;
+        printBtn.style.opacity = "0.5";
+        return; 
+    }
+
+    // Logic to enable/disable the print button
+if (currentInserted < totalCost) {
+        // INSUFFICIENT STATE
+        status.innerText = "Waiting for ₱" + (totalCost - currentInserted) + " more...";
+        status.style.color = "#d9534f"; // Soft Red
+        balanceDisplay.parentElement.style.color = "#d9534f";
+        
+        // Disable Button
+        printBtn.disabled = true;
+        printBtn.style.backgroundColor = "#6c757d"; // Gray
+        printBtn.style.cursor = "not-allowed";
+        printBtn.style.boxShadow = "none";
+    } else {
+        // SUCCESS STATE
+        status.innerText = "Payment Received! You can now print.";
+        status.style.color = "#28a745"; // Success Green
+        balanceDisplay.parentElement.style.color = "#28a745";
+        
+        // Enable and Highlight Button
+        printBtn.disabled = false;
+        printBtn.style.backgroundColor = "#28a745";
+        printBtn.style.cursor = "pointer";
+        printBtn.style.opacity = "1";
+        // Add a slight "glow" to show it's active
+        printBtn.style.boxShadow = "0 0 15px rgba(40, 167, 69, 0.5)";
+    }
+}
+async function init() {
+    Promise.all([
+        calculateCost(),
+        syncBalance()
+    ]);
+}
+// Initial call to set state on page load
+init();

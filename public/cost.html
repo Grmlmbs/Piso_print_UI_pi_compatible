@@ -21,9 +21,12 @@
             <hr>
 
             <div class="payment-section">
-                <label for="payment">Inserted Coin:</label>
-                <input type="number" id="payment" min="0" placeholder="0.00">
-                <p id="status"></p>
+                <h2>Inserted Coin:</h2>
+                <div class="inserted-amount">
+                    <h1>₱<span id="inserted-balance">0</span></h1>
+                </div>
+                <h3 id="status">Please insert coins</h3>
+                <p class="no-change-warning" style="color: #d9534f; font-weight: bold; font-size: 0.8rem; margin-top: -10px;">!WARNING!: THIS MACHINE DOESN'T RETURN CHANGE, PLEASE INSERT EXACT AMOUNT ONLY!</p>
             </div>
 
             <div class="cost-action-area">
@@ -36,6 +39,7 @@
 			<p id="loading-text">Loading...</p>		
 		</div>
 <script src="/loading.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script src="cost.js"></script>
 </body>
 </html>

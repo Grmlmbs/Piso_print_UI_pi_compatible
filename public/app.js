@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastUploadedBaseName = null;
     let totalPages = 0;
     let allPagesImages = { letter: [], legal: [] };
+    let lastUploadedSize = 0;
 
     // =========================
     // HELPER: CONTROL SETTINGS STATE
@@ -299,6 +300,8 @@ function updatePreview() {
     // =========================
     // FILE UPLOAD HANDLER
     // =========================
+    
+    
    form.addEventListener("submit", async e => {
     e.preventDefault();
     
@@ -326,6 +329,7 @@ function updatePreview() {
         // 2. Set global data
         lastUploadedBaseName = result.baseName;
         totalPages = result.totalPages; // CRITICAL: Update global page count
+        lastUploadedSize = result.fileSize || 0;
         handlePreviewImages(result.images, result.totalPages); 
         
         // 3. Clear the 'uploading' state BEFORE calling updatePreview
@@ -380,11 +384,13 @@ function updatePreview() {
             Copies: copiesInput.value,
             Paper_Size: paperSelect.value,
             File_Path: lastUploadedBaseName,
-            File_Size: "0",
+            File_Size: (lastUploadedSize || 0).toString(),
             Status: "pending"
         };
 
         try {
+            
+            await fetch('/balance/start-session', { method: 'POST' });
             const response = await fetch("/transaction/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -459,6 +465,7 @@ function updatePreview() {
         previewOverlay.classList.add("hidden");
         overlayText.innerHTML = "Processing PDF...Please wait.";
         
+        lastUploadedSize = 0;
         console.log("File changed: Settings reset and preview cleared.")
     });
     

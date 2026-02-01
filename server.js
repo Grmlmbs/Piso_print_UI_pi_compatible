@@ -51,6 +51,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
     storage,
+    limits: { fileSize: 25 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'application/pdf') cb(null, true);
         else cb(new Error('Only PDF files are allowed'));
@@ -184,35 +185,6 @@ async function resizePDF(inputPath, outputPath, targetWidth, targetHeight) {
             width: newW,
             height: newH,
         });
-        /*
-        const embeddedPage = await newPdfDoc.embedPage(page);
-
-        // 1. Get size and sanitize
-        const { width, height } = embeddedPage.size;
-        
-        const sanitizedWidth = isNaN(width) ? 1 : width;
-        const sanitizedHeight = isNaN(height) ? 1 : height;
-
-        const safeWidth = Math.max(1, sanitizedWidth);
-        const safeHeight = Math.max(1, sanitizedHeight);
-
-        // 2. Add a new page with the target size
-        const newPage = newPdfDoc.addPage([targetWidth, targetHeight]);
-        
-        // --- START SQUISHED FIX ---
-        // Calculate the necessary scaling factors for X and Y to fill the page
-        const scaleX = targetWidth / safeWidth;
-        const scaleY = targetHeight / safeHeight;
-
-        // Draw the embedded page onto the new page, stretched to fill the entire area
-        newPage.drawPage(embeddedPage, {
-            x: 0, // Start drawing from the bottom-left
-            y: 0,
-            width: safeWidth * scaleX,  // Will equal targetWidth
-            height: safeHeight * scaleY, // Will equal targetHeight
-        });
-        // --- END SQUISHED FIX ---
-        */
     }
     
     const pdfBytes = await newPdfDoc.save();
@@ -256,7 +228,6 @@ async function scanUsedSections(filePath) {
 
         if (used) totalUsedSections++;
     }
-
     return totalUsedSections;
 }
 
@@ -289,13 +260,22 @@ app.post('/upload', async (req, res) => {
     let uploadedPath;
     try {
         await new Promise((resolve, reject) => {
-            upload.single('pdfFile')(req, res, err => err ? reject(err) : resolve());
+            upload.single('pdfFile')(req, res, err =>  {
+                if (err) {
+                    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+                        return reject(new Error("File is too large (Max 25MB)"));
+                    }
+                    return reject(err);
+                }
+                resolve();
+            });
         });
 
         if (!req.file) return res.json({ success: false, message: 'No file uploaded' });
         
         // If we reach here, the file was successfully saved to disk by Multer.
         uploadedPath = path.join(uploadsDir, req.file.filename);
+        const fileSizeInBytes = req.file.size;
         const baseName = path.parse(req.file.filename).name;
 
         // ... (rest of the upload logic, which starts with clearing caches) ...
@@ -350,6 +330,7 @@ app.post('/upload', async (req, res) => {
             totalPages,
             originalSize,
             baseName,
+            fileSize: fileSizeInBytes
 	    //detectedColor
         });
 
@@ -570,27 +551,51 @@ app.use((err, req, res, next) => {
     next();
 });
 
-app.post('/balance/reset', (req, res) => {
-    userBalance = 0;
-    io.emit('update_balance', 0);
-    res.json({ success: true });
-});
-
 //coinSlot codes.
 
 const serialPort = new SerialPort({ path: '/dev/ttyUSB0', baudRate: 9600 });
 const parser = serialPort.pipe(new ReadlineParser({ delimiter: '\r\n' }));
 
+let isAcceptingCoins = false;
 let userBalance = 0;
 
+app.post('/balance/reset', (req, res) => {
+    userBalance = 0;
+    isAcceptingCoins = false;
+    io.emit('update_balance', 0);
+    console.log("Balance has been reset to 0.");
+    res.json({ success: true });
+});
+
+app.get('/balance/current', (req, res) => {
+    res.json({ balance: userBalance });
+});
+
 parser.on('data', (data) => {
-    if (data.includes("COIN")) {
-        userBalance += 1; 
-        console.log("Coin inserted! New Balance:", userBalance);
+    const rawData = data.toString().trim();
+    console.log(`[SERIAL] Received: "${rawData}"`); // See what the Pi sees
+
+    if (rawData.includes("COIN")) {
         
-        // Use userBalance consistently
-        io.emit('update_balance', userBalance);
+        if (isAcceptingCoins) {
+            userBalance += 1; 
+            console.log(`[SOCKET] Broadcasting New Balance: ₱${userBalance}`);
+            io.emit('upadte_balance', userBalance);
+        } else {
+            console.log("[PAYMENT Rejected: Session not started yet.");
+        }
+        // This line sends the data to your browser
+        io.emit('update_balance', userBalance); 
+    } else {
+        console.log("[SERIAL] Ignore: Data did not contain 'COIN'");
     }
+});
+
+app.post('/balance/start-session', (req, res) => {
+    userBalance = 0;
+    isAcceptingCoins = true;
+    console.log("Coin acceptance ENABLED");
+    res.json({ success: true });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
