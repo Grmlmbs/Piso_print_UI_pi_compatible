@@ -46,3 +46,22 @@ async function handleLogin() {
 		loginBtn.disabled = false;
 	}
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+	const sidebar = document.getElementById("sidebar");
+	const toggleBtn = document.getElementById("toggle-menu");
+	
+	toggleBtn.addEventListener("click", () => {
+		sidebar.calssList.toggle("collapsed");
+		
+		//Save state to keep the collapsible menu state even after refresh.
+		const isCollapsed = sidebar.classList.contains("collapsed");
+		localStorage.setItem("sidebar-state", isCollapsed ? "small" : "large");
+	});
+	
+	// Restore state on load
+	
+	if (localStorage.getItem("sidebar-state") === "small") {
+		sidebar.clasList.add("collapased");
+	}
+});

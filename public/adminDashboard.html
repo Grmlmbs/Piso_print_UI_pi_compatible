@@ -5,8 +5,27 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Piso Print Kiosk</title>
 	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="adminstyles.css">
 </head>
 <body>
-	<h1>This is the Dashboard</h1>
+	<div id="sidebar" class="sidebar">
+		<div class="sidebar-header">
+			<button id="toggle-menu" class="toggle-btn">
+				<img src="/sources/menu.png" class="icon" id="toggle-img" alt="Toggle Menu" width="30">
+			</button>
+			<span class="brand-name">Piso Print Admin</span>
+		</div>
+		
+		<nav class="sidebar-nav">
+			<ul>
+				<li><a href="/analytics"><img src="/sources/bar-chart.png" class="icon" id="Analytics-img" alt="Analytics" width="30"><span class="text">Analytics</span></a></li>
+				<li><a href="/hisoryAndLogs"><img src="/sources/file.png" class="icon" id="historyAndLogs-img" alt="historyAndLogs" width="30"><span class="text">History and logs</span></a></li>
+				<li><a href="/settings"><img src="/sources/setting.png" class="icon" id="kioskSettings-img" alt="KioskSettings" width="30"><span class="text">Kiosk Settings</span></a></li>
+			</ul>
+		</nav>
+	</div>
+	
+	<div class="main-content">
+	</div>
 </body>
 </html>
