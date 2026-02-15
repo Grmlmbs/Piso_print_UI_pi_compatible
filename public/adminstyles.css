@@ -147,9 +147,11 @@ body {
 	font-size: 40px;
 	margin-right: 15px;
 }
-
+/*-----DASHBOARD-----*/
 .slicers-container{
-	display: flex;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 0.2fr 1fr;
 	align-items:center;
 	justify-content: space-between;
 	width: 100%;
@@ -232,9 +234,125 @@ body {
 	justify-content: center;
 }
 
+/* -------HISTORY STYLES--------- */
+.manipulation-elements-container {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 0.2fr;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	margin-bottom: 20px;
+}
+
+.manipulation-elements-container i {
+	font-size: 30px;
+}
+
+.searchbar-container {
+	display: flex;
+	gap: 15px;
+	color: #15173d;
+}
+
+.searchbar-container input[type="text"] {
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	font-family: inherit;
+}
+
+.filter {
+	display: flex;
+	padding: 2.5px 10px 2.5px 5px;
+	border: 1px solid #cccc;
+	border-radius: 5px;
+	justify-content: center;
+}
+.custom-filter {
+	border-style: none;
+	background-color: #ffffff;
+	padding: 8px;
+	color: #15173d;
+	cursor: pointer;
+	font-family: inherit;
+}
+.filter-container {
+	display: flex;
+	justify-content: end;
+	align-items: center;
+	gap: 10px;
+}
+.filter-container i{
+	font-size: 30px;
+}
+.table-manipulation-elements-container {
+	align-items: center;
+	width: 100%;
+	margin-bottom: 20px;
+}
+
+.table-main-container {
+	background-color: #ffffff;
+	padding: 20px;
+	border-radius: 5px;
+	box-shadow: 0 6px 7px -3px rgba(0,0,0,0.35);
+	margin-top: 20px;
+}
+.table-container {
+	overflow-x: auto;
+}
+
+.history-table {
+	width: 100%;
+	border-collapse: collapse;
+	color: #15173d;
+}
+.history-table th, .history-table td {
+	padding: 12px 15px;
+	text-align: left;
+	border-bottom: 1px solid #ddd;
+}
+.history-tabe th {
+	background-color: #f8f9fa;
+	font-weight: bold;
+	text-transform: uppercase;
+	font-size: 13px;
+}
+.history-table tbody tr:nth-child(even) {
+	background-color: #f2f2f2;
+}
+.status {
+	padding: 5px 10px;
+	border-radius: 20px;
+	font-size: 12px;
+	font-weight: bold;
+}
+
 /* -------MEDIA QUERIES --------- */
 @media screen and (max-width: 992px) {
+
+	/* ------- DASHBOARD -----------*/
+	.slicers-container {
+		grid-template-columns: 1fr;
+		grid-template-rows: 0.2fr 1fr;
+	}
 	
+	.slicers-container input, button{
+		width: 100%;
+		margin-bottom: 20px;
+	}
+	/* ------- HISTORY AND LOGS -------*/
+	.manipulation-elements-container {
+		grid-template-columns: 1fr;
+		grid-template-rows: 0.2fr 2fr;
+	}
+	
+	.manipulation-elements-container input {
+		width: 100%;
+	}
+	
+	/* ------- PAGE CONTAINER --------*/
 	.grid-container {
 		grid-template-columns: 1fr;
 		grid-template-rows: 0.2fr 3fr;
@@ -268,6 +386,8 @@ body {
 		cursor: pointer;
 		color: white;
 	}
+	
+	
 }
 
 @media screen and (max-width: 768px) {
