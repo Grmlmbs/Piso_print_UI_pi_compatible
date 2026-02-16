@@ -142,6 +142,7 @@ body {
 .main-title {
 	display: flex;
 	align-items: center;
+	margin-bottom: 20px;
 }
 .main-title i{
 	font-size: 40px;
@@ -150,8 +151,8 @@ body {
 /*-----DASHBOARD-----*/
 .slicers-container{
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	grid-template-rows: 0.2fr 1fr;
+	grid-template-columns: 1fr 110px;
+	grid-template-rows: 0.2fr;
 	align-items:center;
 	justify-content: space-between;
 	width: 100%;
@@ -260,6 +261,7 @@ body {
 	border: 1px solid #ccc;
 	border-radius: 5px;
 	font-family: inherit;
+	width: 100%;
 }
 
 .filter {
@@ -277,11 +279,19 @@ body {
 	cursor: pointer;
 	font-family: inherit;
 }
+
+.custom-filter:focus {
+	outline: none;
+}
+
 .filter-container {
 	display: flex;
 	justify-content: end;
 	align-items: center;
 	gap: 10px;
+}
+.filter:hover {
+	border-color: 2px solid #15173d;
 }
 .filter-container i{
 	font-size: 30px;
@@ -297,7 +307,7 @@ body {
 	padding: 20px;
 	border-radius: 5px;
 	box-shadow: 0 6px 7px -3px rgba(0,0,0,0.35);
-	margin-top: 20px;
+	margin: 10px 0px 30px;
 }
 .table-container {
 	overflow-x: auto;
@@ -327,6 +337,46 @@ body {
 	border-radius: 20px;
 	font-size: 12px;
 	font-weight: bold;
+}
+
+/*-------- SETTINGS -------*/
+.options-container i{
+	font-size: 30px;
+	margin-right: 15px;
+}
+.options-container h4{
+	font-size: 25px;
+}
+.configuration-container span{
+	font-size: 20px;
+	font-weight: bold;
+	margin-bottom: 20px;
+}
+.configuration-container {
+	padding: 0px 20px;
+}
+.description {
+	margin-bottom: 20px;
+}
+.input-field-container {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 20px;
+}
+.sub-options-container {
+	display: grid;
+	grid-template-rows: 40px 1fr;
+	align-items: center;
+	padding: 25px;
+	border-radius: 5px;
+	background-color: #white;
+	box-shadow: 0 6px 7px -3px rgba(0,0,0,0.35);
+	margin-bottom: 20px;
+}
+.option-title {
+	display: flex;
+	align-items: center;
+	margin-bottom: 20px;
 }
 
 /* -------MEDIA QUERIES --------- */

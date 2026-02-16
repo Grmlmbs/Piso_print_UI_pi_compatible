@@ -135,23 +135,21 @@
 						<h2>HISTORY AND LOGS</h2>
 					</div>
 					<div class="manipulation-elements-container">
-						<div class="searchbar-container">
-							<input type="text" id="searchBar" placeholder="Search">
-							<i class="ri-search-line"></i>
-						</div>
 						<div class="Date-slicer">
 							<label for="start-date">Date:</label>
 							<input type="date" id="start-date">
 							<label for="end-date">-</label>
 							<input type="date" id="end-date">
 						</div>
+						<div class="searchbar-container">
+							<input type="text" id="searchBar" placeholder="Search">
+							<i class="ri-search-line"></i>
+						</div>
 					</div>
 					
 					<div class="table-main-container">
-						<div class="table-top">
-							<div class="Table-title">
-								<h3>Transaction History</h3>
-							</div>
+						<div class="Table-title">
+							<h3>Transaction History</h3>
 						</div>
 						<div class="table-manipulation-elements-container">
 							<div class="filter-container">
@@ -196,12 +194,98 @@
 							</table>
 						</div>
 					</div>
+					<div class="manipulation-elements-container">
+						<div class="Date-slicer">
+							<label for="start-date">Date:</label>
+							<input type="date" id="start-date">
+							<label for="end-date">-</label>
+							<input type="date" id="end-date">
+						</div>
+						<div class="searchbar-container">
+							<input type="text" id="searchBar" placeholder="Search">
+							<i class="ri-search-line"></i>
+						</div>
+					</div>
+					<div class="table-main-container">
+						<div class="table-title">
+							<h3>Error Logs</h3>
+						</div>
+						<div class="table-manipulation-elements-container">
+							<div class="filter-container">
+								<div class="filter">
+									<label for="filter"><i class="ri-filter-2-line"></i></label>
+									<select id="filter" class="custom-filter">
+										<option value="none">None</option>
+										<option value="Date">Date</option>
+										<option value="amount">Amount</option>
+										<option value="File size">File size</option>
+									</select>
+								</div>
+								<i class="ri-arrow-up-down-line"></i>
+							</div>
+						</div>
+						<div class="table-container">
+							<table class="history-table">
+								<thead>
+									<tr>
+										<th>Error ID</th>
+										<th>Timestamp</th>
+										<th>Severity Level</th>
+										<th>Module</th>
+										<th>Error Message</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td>000001</td>
+										<td>2026-02-15 07:58:00</td>
+										<td>ERROR</td>
+										<td>File Upload</td>
+										<td>Paper Jam detected in Tray 1</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
 				</div>
 				<div id="settings">
 					<div class="main-title">
 						<i class="ri-settings-2-fill"></i>
 						<h2>SETTINGS</h2>
 					</div>
+					
+					<div class="options-container">
+						<div class="sub-options-container">
+							
+							<div class="option-title">
+								<i class="ri-currency-line"></i>
+								<h4>Pricing</h4>
+							</div>
+							
+							<div class="configuration-container">
+								<div class="description">
+									<span>Price rate per page</span>
+								</div>
+								<div class="input-field-container">
+									<label for="bw-price-rate">Black and white prints</label>
+									<input type="number" id="bw-price-rate" placeholder="0" min="0">
+								</div>
+								<div class="input-field-container">
+									<label for="color-price-rate">Colored prints</label>
+									<input type="number" id="color-price-rate" placeholder="0" min="0">
+								</div>
+							</div>
+							
+						</div>
+						
+						<div class="sub-options-container">
+							<div class="main-title">
+								<i class="ri-user-3-line"></i>
+								<h4>Account settings</h4>
+							</div>
+						</div>
+					</div>
+					
 				</div>
 			</main>
 			<!-- End Main -->
