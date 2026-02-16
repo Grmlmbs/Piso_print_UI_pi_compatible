@@ -268,20 +268,71 @@
 								</div>
 								<div class="input-field-container">
 									<label for="bw-price-rate">Black and white prints</label>
-									<input type="number" id="bw-price-rate" placeholder="0" min="0">
+									<div class="price-field">
+										<i class="ri-subtract-line"></i>
+										<input type="text" id="bw-price-rate" placeholder="0">
+										<i class="ri-add-line"></i>
+									</div>
 								</div>
 								<div class="input-field-container">
 									<label for="color-price-rate">Colored prints</label>
-									<input type="number" id="color-price-rate" placeholder="0" min="0">
+									<div class="price-field">
+										<i class="ri-subtract-line"></i>
+										<input type="text" id="color-price-rate" placeholder="0">
+										<i class="ri-add-line"></i>
+									</div>
+								</div>
+								<div class="input-field-container">
+									<label for="color-price-rate multiplier">Price multiplier(For colored prints)</label>
+									<div class="price-field">
+										<i class="ri-subtract-line"></i>
+										<input type="text" id="color-multiplier" placeholder="0">
+										<i class="ri-add-line"></i>
+									</div>
 								</div>
 							</div>
-							
 						</div>
 						
 						<div class="sub-options-container">
-							<div class="main-title">
+							<div class="option-title">
 								<i class="ri-user-3-line"></i>
 								<h4>Account settings</h4>
+							</div>
+							<div class="configuration-container">
+								<div class="description">
+									<span>Account details</span>
+								</div>
+								<div class="account-input-field-container">
+									<label for="username">Username</label>
+									<div class="pass-container">
+										<input type="text" class="account-field" id="username" placeholder="Username">
+									</div>
+								</div>
+								<div class="account-input-field-container">
+									<label for="username">Password</label>
+									<div class="pass-container">
+										<input type="password" class="account-field" id="password" placeholder="Password">
+										<i class="ri-eye-fill" id="eye-icon"></i>
+									</div>
+								</div>
+								<div class="account-input-field-container">
+									<label for="confirm-password">Confirm password</label>
+									<div class="pass-container">
+										<input type="password" class="account-field" id="conPassword" placeholder="Confirm Password">
+										<i class="ri-eye-fill"></i>
+									</div>
+								</div>
+								<div class="buttons">
+									<div class="button-container">
+										<button type="button" id="editCredentialsBtn" class="print-btn">Edit Credentials</button>
+									</div>
+									<div class="button-container">
+										<button type="button" id="saveBtn" class="save-btn">Save</button>
+									</div>
+									<div class="button-container">
+										<button type="button" id="clearBtn" class="cancel-btn">Cancel</button>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>

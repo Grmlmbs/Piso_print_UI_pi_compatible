@@ -362,10 +362,11 @@ body {
 	display: flex;
 	justify-content: space-between;
 	margin-bottom: 20px;
+	align-items: center;
 }
 .sub-options-container {
 	display: grid;
-	grid-template-rows: 40px 1fr;
+	grid-template-rows: 50px 1fr;
 	align-items: center;
 	padding: 25px;
 	border-radius: 5px;
@@ -377,6 +378,72 @@ body {
 	display: flex;
 	align-items: center;
 	margin-bottom: 20px;
+}
+.input-field-container input[type="text"] {
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	font-family: inherit;
+	width: 40px;
+	text-align: center;
+	margin: 0px 10px;
+}
+.price-field {
+	display: flex;
+	align-items: center;
+}
+.price-field i {
+	font-size: 20px;
+	margin: 0px;
+}
+
+.account-input-field-container input {
+	padding: 8px;
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	font-family: inherit;
+	display: flex;
+	width: 100%;
+}
+.account-input-field-container {
+	margin-bottom: 10px;
+}
+.account-field {
+	margin-top: 5px;
+}
+
+.pass-container {
+	display: flex;
+	align-items: center;
+}
+.pass-container i {
+	margin: 5px 15px 0px 15px;
+	font-size: 20px;
+}
+.buttons {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-rows: 40px;
+	gap: 15px;
+	Margin-top: 20px;
+	Justify-content: end;
+	font-family: inherit;
+}	
+.buttons button{
+	min-width: 140px;
+}
+.save-btn, .cancel-btn {
+	padding: 12px;
+	background-color: white;
+	color: #15173d;
+	border: 1px solid #007bff;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: bold;
+}
+.buttons button:hover {
+	background-color: #f4f4f4;
+	color: #15173d;
 }
 
 /* -------MEDIA QUERIES --------- */
@@ -455,6 +522,12 @@ body {
 @media screen and (max-width: 576px) {
 	.header-left {
 		display: none;
+	}
+	.buttons {
+		display: grid;
+		grid-template-columns: 1fr;
+		grid-template-rows: 40px 40px 40px;
+		gap-bottom: 5px;
 	}
 }
 
