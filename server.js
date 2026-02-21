@@ -15,6 +15,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
+const session = require('express-session');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,7 +63,30 @@ app.use(express.static(path.join(root, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/cache', express.static(cacheDir));
 
+
+app.use(session({
+    secret: 'group6secret12345',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 24
+    }
+})); 
 // ------CODES FOR THE LANDING PAGE-------
+
+const checkAuth = (req, res, next) => {
+    if (req.session && req.session.isAdmin) {
+        return next();
+    } else {
+        res.redirect('/adminLogin.html');
+    }
+};
+
+app.get('/adminDashboard.html', checkAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'adminDashboard.html'));
+});
+
 // Serve Login Route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
@@ -76,6 +100,9 @@ app.post('/admin/login', async (req, res) => {
     try {
         const admin = db.prepare('SELECT * FROM Admins WHERE username = ?').get(username);
         if (admin && await bcrypt.compare(password, admin.password)) {
+            
+            req.session.isAdmin = true;
+            
             res.json({ success: true, redirect: '/adminDashboard.html' });
         } else {
             res.json({ success: false, message: 'invalid username or password' });
@@ -83,6 +110,12 @@ app.post('/admin/login', async (req, res) => {
     } catch {
         res.status(500).json({ success: false, message: 'Server error' });
     }
+});
+
+app.post('/admin/logout', (req, res) => {
+    req.session.destroy();
+    res.clearCookie('connect.sid');
+    res.json({ success: true });
 });
 
 // ----- Helpers -----
@@ -596,6 +629,153 @@ app.post('/balance/start-session', (req, res) => {
     isAcceptingCoins = true;
     console.log("Coin acceptance ENABLED");
     res.json({ success: true });
+});
+
+//Codes for the admin
+//Dashboard data fetching codes.
+//This is an API endpoint to fetch total sales.
+app.get('/api/total-sales', (req, res) => {
+    const { start, end } = req.query;
+    let query = 'SELECT SUM(Amount) AS total FROM Transactions';
+    let params = [];
+    
+    // If dates are provided, modify the query
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    try {
+        // .get() is used because were fetching 1 row.
+        const result = db.prepare(query).get(...params);
+        // return 0 if the tables is empty.
+        res.json({ totalSales: result.total || 0 });
+    } catch (err) {
+        console.error("Database error:", err);
+        res.status(500).json({ error: "Failed to calculate total sales" });
+    }
+});
+
+//This is an API endpoint to fetch average sales per transaction.
+app.get('/api/avg-sales', (req, res) => {
+    const { start, end } = req.query;
+    let query = 'SELECT AVG(Amount) As average FROM Transactions';
+    let params = [];
+    
+    // If dates are provided, modify the query
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    try {
+        // .get() is used because were fetching 1 row.
+        const result = db.prepare(query).get(...params);
+        // return 0 if the tables is empty.
+        res.json({ avgSales: result.average || 0 });
+    } catch (err) {
+        console.error("Database error: ", err);
+        res.status(500).json({error: "Failed to calculate average sales" });
+    }
+});
+
+//This is an API endpoint to fetch the number of Transactions.
+app.get('/api/num-of-transaction', (req, res) => {
+    const { start, end } = req.query;
+    let query = 'SELECT COUNT(Transaction_Id) AS transactions FROM Transactions';
+    let params = [];
+    
+    // If dates are provided, modify the query
+    if (start && end) {
+        query += '  WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    try {
+        // .get() is used because were fetching 1 row.
+        const result = db.prepare(query).get(...params);
+        // return 0 if the table is empty.
+        res.json({ numOfTransactions: result.transactions || 0 });
+    } catch (err) {
+        console.error("Database error: ", err);
+        res.status(500).json({error: "Failed to calculate number of transactions" });
+    }
+});
+
+// An API endpoint to fetch the total pages printed
+app.get('/api/total-pages-printed', (req, res) => {
+    const { start, end } = req.query;
+    let query = `
+        SELECT SUM(
+            CASE
+                WHEN Pages = '' OR Pages IS NULL THEN 0
+                ELSE ((LENGTH(Pages) - LENGTH(REPLACE(Pages, ',', '')) + 1)*Copies)
+            END
+        ) AS totalPageCount
+        FROM Transactions
+    `;
+    let params = [];
+    
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    try {
+        const result = db.prepare(query).get(...params);
+        res.json({ totalPageCount: result.totalPageCount || 0 });
+    } catch (err) {
+        console.error("Database error: ", err);
+        res.status(500).json({error: "Failed ot calculate total page count" });
+    }
+});
+// An API endpoint to fetch the data for the distribution of transaction pie chart
+app.get('/api/dist-tran-pie', (req, res) => {
+    const {start, end } = req.query;
+    let query = 'SELECT Status, COUNT(*) AS count FROM Transactions';
+    let params = [];
+    
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    query += ' GROUP BY Status';
+    
+    try {
+        const rows = db.prepare(query).all(...params);
+        res.json(rows);
+    } catch (err) {
+        console.error("Database error:", err);
+        res.status(500).json({ error: "Failed to fetch status distribution" });
+    }
+});
+
+// An API endpoint to fetch the data for the sales trend column chart.
+app.get('/api/sales-trend', (req, res) => {
+    const { start, end } = req.query;
+    let query = `
+        SELECT
+            strftime('%Y-%m', Date) as Month,
+            SUM(Amount) AS monthlyTotal
+            FROM Transactions
+    `;
+    let params = [];
+    
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    query += ' GROUP BY Month';
+    
+    try {
+        const rows = db.prepare(query).all(...params);
+        res.json(rows);
+    } catch (err) {
+        console.error("Database error:", err);
+        res.status(500).json({ error: "Failed to fetch sales trends" });
+    }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

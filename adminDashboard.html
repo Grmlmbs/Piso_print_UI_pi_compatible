@@ -70,10 +70,10 @@
 					</div>
 					<div class="slicers-container">
 						<div class="Date-slicer">
-							<label for="start-date">Date:</label>
-							<input type="date" id="start-date">
-							<label for="end-date">-</label>
-							<input type="date" id="end-date">
+							<label for="dashboard-start-date">Date:</label>
+							<input type="date" id="dashboard-start-date">
+							<label for="dashboard-end-date">-</label>
+							<input type="date" id="dashboard-end-date">
 						</div>
 						<div class="printBtn-container">
 							<button type="button" id="printBtn" class="print-btn">Print Reports</button>
@@ -85,47 +85,47 @@
 							<div class="card-inner">
 								<h3>TOTAL SALES</h3>
 							</div>
-							<h1>PHP 10000</h1>
+							<h1 id="total-sales">PHP 0.00</h1>
 						</div>
 					
 						<div class="card">
 							<div class="card-inner">
 								<h3>AVG. SALES PER TRANSACTIONS</h3>
 							</div>
-							<h1>PHP 100.00</h1>
+							<h1 id="avg-sales">PHP 0.00</h1>
 						</div>
 					
 						<div class="card">
 							<div class="card-inner">
 								<h3>TRANSACTIONS</h3>
 							</div>
-							<h1>10000</h1>
+							<h1 id="num-of-transaction">0</h1>
 						</div>
 					
 						<div class="card">
 							<div class="card-inner">
 								<h3>PAGES PRINTED</h3>
 							</div>
-							<h1>10000</h1>
+							<h1 id="pages-printed">0</h1>
 						</div>
 					</div>
 				
 					<div class="charts">
 						<div class="charts-card">
 							<h2 class="chart-title">Distribution of transactions</h2>
-							<div id="pie-chart"></div>
+							<div class="visualization" id="pie-chart"></div>
 						</div>
 						<div class="charts-card">
-							<h2 class="chart-title">Sales Trend</h2>
-							<div id="bar-chart"></div>
+							<h2 class="chart-title">Monthly Sales Trend</h2>
+							<div class="visualization" id="bar-chart"></div>
 						</div>
 						<div class="charts-card">
 							<h2 class="chart-title">Volume Of Usage Trend</h2>
-							<div id="line-chart"></div>
+							<div class="visualization" id="line-chart"></div>
 						</div>
 						<div class="charts-card">
 							<h2 class="chart-title">Transaction status distribution</h2>
-							<div id="Transaction-distribution-status"></div>
+							<div class="visualization" id="Transaction-distribution-status"></div>
 						</div>
 					</div>
 				</div>
@@ -322,16 +322,16 @@
 										<i class="ri-eye-fill"></i>
 									</div>
 								</div>
-								<div class="buttons">
-									<div class="button-container">
-										<button type="button" id="editCredentialsBtn" class="print-btn">Edit Credentials</button>
-									</div>
-									<div class="button-container">
-										<button type="button" id="saveBtn" class="save-btn">Save</button>
-									</div>
-									<div class="button-container">
-										<button type="button" id="clearBtn" class="cancel-btn">Cancel</button>
-									</div>
+							</div>
+							<div class="buttons">
+								<div class="button-container">
+									<button type="button" id="editCredentialsBtn" class="print-btn">Edit Credentials</button>
+								</div>
+								<div class="button-container">
+									<button type="button" id="saveBtn" class="save-btn">Save</button>
+								</div>
+								<div class="button-container">
+									<button type="button" id="clearBtn" class="cancel-btn">Cancel</button>
 								</div>
 							</div>
 						</div>
@@ -343,6 +343,7 @@
 		</div>
 		<script src="apexcharts.min.js"></script>
 		<script src="dashboard.js"></script>
+		<script src="admin.js"></script>
 	</body>
 </html>
 

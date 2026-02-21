@@ -5,6 +5,45 @@ var historyAndLogsBtn = document.getElementById("historyBtn");
 var settingsBtn = document.getElementById("settingsBtn");
 var sidebarOpen = false;
 
+
+document.addEventListener('DOMContentLoaded', () => {
+	console.log("Page loaded! Fetching data...");
+	
+	const startInput = document.getElementById('dashboard-start-date');
+	const endInput = document.getElementById('dashboard-end-date');
+	
+	if (startInput && endInput) {
+		
+		startInput.addEventListener('change', handleDateChange);
+		endInput.addEventListener('change', handleDateChange);
+		
+		const today = new Date();
+		const yesterday = new Date();
+		yesterday.setDate(today.getDate() - 1);
+		
+		const todayStr = today.toISOString().split('T')[0];
+		const yesterdayStr = yesterday.toISOString().split('T')[0];
+		
+		startInput.value = yesterdayStr;
+		endInput.value = todayStr;
+	}
+	
+	updateSalesCard();
+	updateAvgSalesPerTran();
+	updateNumOfTran();
+	updateTotalPagesPrinted();
+	updateTranDistributionPie();
+	updateSalesTrendColChart();
+	
+	// refresh every minute.
+	setInterval(updateSalesCard, 60000);
+	setInterval(updateAvgSalesPerTran, 60000);
+	setInterval(updateNumOfTran, 60000);
+	setInterval(updateTotalPagesPrinted, 60000);
+	setInterval(updateTranDistributionPie, 60000);
+	setInterval(updateSalesTrendColChart, 60000);
+});
+
 function openSidebar() {
     if (!sidebarOpen) {
         sidebar.classList.add("sidebar-responsive");
@@ -13,7 +52,6 @@ function openSidebar() {
     }
 }
 
-// Open the dashboard when button is clicked.
 function closeSidebar() {
     if (sidebarOpen) {
         sidebar.classList.remove("sidebar-responsive"); 
@@ -39,14 +77,34 @@ window.onload = function() {
 
 dashboardBtn.addEventListener('click', function() {
 	showSection('dashboard');
+	dashboardBtn.style.backgroundColor = "#f4f4f4";
+	dashboardBtn.style.color = "#15173d";
+	
+	historyAndLogsBtn.style.backgroundColor = "#15173d";
+	historyAndLogsBtn.style.color = "#f4f4f4";
+	
+	settingsBtn.style.backgroundColor = "#15173d";
+	settingsBtn.style.color = "#f4f4f4";
 	if (window.innerWidth <= 992) closeSidebar();
 });
 historyBtn.addEventListener('click', function() {
 	showSection('history-and-logs');
+	dashboardBtn.style.backgroundColor = "#15173d";
+	dashboardBtn.style.color = "#f4f4f4";
+	historyAndLogsBtn.style.backgroundColor = "#f4f4f4";
+	historyAndLogsBtn.style.color = "#15173d";
+	settingsBtn.style.backgroundColor = "#15173d";
+	settingsBtn.style.color = "#f4f4f4";
 	if (window.innerWidth <= 992) closeSidebar();
 });
 settingsBtn.addEventListener('click', function() {
 	showSection('settings');
+	dashboardBtn.style.backgroundColor = "#15173d";
+	dashboardBtn.style.color = "#f4f4f4";
+	historyAndLogsBtn.style.backgroundColor = "#15173d";
+	historyAndLogsBtn.style.color = "#f4f4f4";
+	settingsBtn.style.backgroundColor = "#f4f4f4";
+	settingsBtn.style.color = "#15173d";
 	if (window.innerWidth <= 992) closeSidebar();
 });
 
@@ -58,44 +116,161 @@ window.addEventListener('click', function(e) {
 });
 
 
-/*
-// bar-chart code
-        var options = {
-          series: [{
-          data: [400, 430, 448, 470, 540, 580, 690, 1100, 1200, 1380]
-        }],
-          chart: {
-          type: 'bar',
-          height: 350
-        },
-        plotOptions: {
-          bar: {
-            borderRadius: 4,
-            borderRadiusApplication: 'end',
-            horizontal: true,
-          }
-        },
-        dataLabels: {
-          enabled: false
-        },
-        xaxis: {
-          categories: ['South Korea', 'Canada', 'United Kingdom', 'Netherlands', 'Italy', 'France', 'Japan',
-            'United States', 'China', 'Germany'
-          ],
-        }
-        };
+//------DASHBOARD SECTION CODES -------
+//const startDateInput = document.getElementById('dashboard-start-date');
+//const endDateInput = document.getElementById('dashboard-end-date');
+//Date formatter
+function formatDate(dateToBeFormatted) {
+	const yyyy = dateToBeFormatted.getFullYear();
+	const mm = String(dateToBeFormatted.getMonth() + 1).padStart(2, '0');
+	const dd = String(dateToBeFormatted.getDate()).padStart(2, '0');
+	
+	const date = `${yyyy}-${mm}-${dd}`;
+	
+	return date;
+}
+//Date change handler
+function handleDateChange() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	console.log(`Filtering from ${start} to ${end}`);
+	updateSalesCard();
+	updateAvgSalesPerTran();
+	updateNumOfTran();
+	updateTotalPagesPrinted();
+	updateTranDistributionPie();
+	updateSalesTrendColChart();
+}
 
-        var chart = new ApexCharts(document.querySelector("#bar-chart"), options);
-        chart.render();
-        */
-// pie-chart code
+//'change' eventListener to update dashboard on date change.
+//startDateInput.addEventListener('change', handleDateChange);
+//endDateInput.addEventListener('change', handleDateChange);
+
+// function to update total sales card.
+async function updateSalesCard() {
+	const start = document.getElementById('dashboard-start-date').value;
+    const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	try {
+		const response = await fetch('/api/total-sales' + dateParams);
+		const data = await response.json();
+		
+		const totalSales = document.getElementById('total-sales');
+		
+		if (totalSales) {
+			const total = data.totalSales || 0;
+			
+			totalSales.innerText = 'PHP ' + total.toLocaleString(undefined, {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			});
+		}
+	} catch (err) {
+		console.error("Error updating sales card:", err);
+	}
+}
+// function to update average sales per transaction
+async function updateAvgSalesPerTran() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	try {
+		const response = await fetch('/api/avg-sales' + dateParams);
+		const data = await response.json();
+		
+		const avgSales = document.getElementById('avg-sales');
+		
+		if (avgSales) {
+			const total = data.avgSales || 0;
+			
+			avgSales.innerText = 'PHP ' + total.toLocaleString(undefined, {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			});
+		}
+	} catch (err) {
+		console.error("Error updating avg sales card: ", err);
+	}
+}
+//function to get the total number of transactions
+async function updateNumOfTran() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	try {
+		const response = await fetch('/api/num-of-transaction' + dateParams);
+		const data = await response.json();
+		
+		const numOfTransactions = document.getElementById('num-of-transaction');
+		
+		if (numOfTransactions) {
+			const total = data.numOfTransactions || 0;
+			
+			numOfTransactions.innerText = total;
+		}
+	} catch (err) {
+		console.error("Error updating transaction card: ", err);
+	}
+}
+
+//function to get the total page count printed
+async function updateTotalPagesPrinted() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	try {
+		const response = await fetch('/api/total-pages-printed' + dateParams);
+		const data = await response.json();
+		
+		const numOfPagesPrinted = document.getElementById('pages-printed');
+		
+		if (numOfPagesPrinted) {
+			const total = data.totalPageCount || 0;
+			
+			numOfPagesPrinted.innerText = total;
+		}
+	} catch (err) {
+		console.error("Error updating Total page count card: ", err);
+	}
+}
+		
+// Distribution of transactoins pie chart codes
+
+let pieChart = null;
+
+async function updateTranDistributionPie() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	try {
+		const response = await fetch('/api/dist-tran-pie' + dateParams);
+		const data = await response.json();
+		
+		const statusCount = data.map(item => item.count);
+		const statusLabels = data.map(item => item.Status);
+		
+		if (pieChart) {
+			pieChart.destroy();
+		}
+		
         var options = {
-          series: [44, 55, 13, 43, 22],
+          series: statusCount,
           chart: {
-          width: 380,
-          type: 'pie',
-        },
-        labels: ['Team A', 'Team B', 'Team C', 'Team D', 'Team E'],
+			width: 500,
+			type: 'pie',
+			},
+        labels: statusLabels,
         responsive: [{
           breakpoint: 480,
           options: {
@@ -108,9 +283,89 @@ window.addEventListener('click', function(e) {
           }
         }]
         };
+        pieChart = new ApexCharts(document.querySelector("#pie-chart"), options);
+        pieChart.render();
+	} catch (err) {
+		console.error("Error updating the Distribution of transaction chart");
+	}
+}
 
-        var chart = new ApexCharts(document.querySelector("#pie-chart"), options);
-        chart.render();
+// Sales trend column chart codes
+let columnChart = null;
+
+async function updateSalesTrendColChart() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	if (columnChart) {
+		columnChart.destroy();
+	}
+		
+	try {
+		const response = await fetch('/api/sales-trend' + dateParams);
+		const data = await response.json();
+		
+		const dates = data.map(item => {
+			const dateObj = new Date(item.Month + "-01");
+			return dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+		});
+		
+		const amounts = data.map(item => item.monthlyTotal);
+		
+        var options = {
+          series: [{
+          name: 'Net Profit',
+          data: amounts
+        }],
+          chart: {
+          type: 'bar',
+          height: 350
+        },
+        plotOptions: {
+          bar: {
+            horizontal: false,
+            columnWidth: '55%',
+            borderRadius: 5,
+            borderRadiusApplication: 'end'
+          },
+        },
+        dataLabels: {
+          enabled: false
+        },
+        stroke: {
+          show: true,
+          width: 2,
+          colors: ['transparent']
+        },
+        xaxis: {
+          categories: dates,
+        },
+        yaxis: {
+          title: {
+            text: 'Sales (PHP)'
+          }
+        },
+        fill: {
+          opacity: 1
+        },
+        tooltip: {
+          y: {
+            formatter: function (val) {
+              return "PHP " + val
+            }
+          }
+        }
+        };
+
+        columnChart = new ApexCharts(document.querySelector("#bar-chart"), options);
+        columnChart.render();
+	} catch (err) {
+		console.error("Error updating the sales trend column chart");
+	}
+}
+        
 // line-chart code
         var options = {
           series: [{
@@ -147,54 +402,7 @@ window.addEventListener('click', function(e) {
 
         var chart = new ApexCharts(document.querySelector("#line-chart"), options);
         chart.render();
-// column chart
-        var options = {
-          series: [{
-          name: 'Net Profit',
-          data: [44, 55, 57, 56, 61, 58, 63, 60, 66]
-        }],
-          chart: {
-          type: 'bar',
-          height: 350
-        },
-        plotOptions: {
-          bar: {
-            horizontal: false,
-            columnWidth: '55%',
-            borderRadius: 5,
-            borderRadiusApplication: 'end'
-          },
-        },
-        dataLabels: {
-          enabled: false
-        },
-        stroke: {
-          show: true,
-          width: 2,
-          colors: ['transparent']
-        },
-        xaxis: {
-          categories: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-        },
-        yaxis: {
-          title: {
-            text: '$ (thousands)'
-          }
-        },
-        fill: {
-          opacity: 1
-        },
-        tooltip: {
-          y: {
-            formatter: function (val) {
-              return "$ " + val + " thousands"
-            }
-          }
-        }
-        };
 
-        var chart = new ApexCharts(document.querySelector("#bar-chart"), options);
-        chart.render();
 // Transaction distribution status
         var options = {
           series: [{

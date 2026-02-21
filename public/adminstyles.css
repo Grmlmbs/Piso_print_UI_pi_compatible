@@ -92,16 +92,12 @@ body {
 	display: flex;
 	align-items: center;
 	transition: background 0.3s;
-}
-
-.sidebar-list-item:hover {
-	background-color: #f4f4f4;
-	color: #15173D;
 	cursor: pointer;
 }
 
-.sidebar-list-item img{
-	margin-right: 15px;
+#dashboardBtn {
+	background-color: #f4f4f4;
+	color: #15173d;
 }
 
 .sidebar-responsive {
@@ -234,6 +230,11 @@ body {
 	align-items: center;
 	justify-content: center;
 }
+.visualization {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
 
 /* -------HISTORY STYLES--------- */
 .manipulation-elements-container {
@@ -254,6 +255,7 @@ body {
 	display: flex;
 	gap: 15px;
 	color: #15173d;
+	margin: 0px 15px 0px 15px;
 }
 
 .searchbar-container input[type="text"] {
@@ -421,9 +423,7 @@ body {
 	font-size: 20px;
 }
 .buttons {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	grid-template-rows: 40px;
+	display: flex;
 	gap: 15px;
 	Margin-top: 20px;
 	Justify-content: end;
@@ -452,21 +452,26 @@ body {
 	/* ------- DASHBOARD -----------*/
 	.slicers-container {
 		grid-template-columns: 1fr;
-		grid-template-rows: 0.2fr 1fr;
+		grid-template-rows: 60px 60px;
 	}
 	
 	.slicers-container input, button{
 		width: 100%;
-		margin-bottom: 20px;
+	}
+	.Date-slicer {
+		margin: 0px;
 	}
 	/* ------- HISTORY AND LOGS -------*/
 	.manipulation-elements-container {
 		grid-template-columns: 1fr;
-		grid-template-rows: 0.2fr 2fr;
+		grid-template-rows:60px 60px;
 	}
 	
 	.manipulation-elements-container input {
 		width: 100%;
+	}
+	.searchbar-container {
+		margin: 0px;
 	}
 	
 	/* ------- PAGE CONTAINER --------*/
@@ -503,7 +508,13 @@ body {
 		cursor: pointer;
 		color: white;
 	}
-	
+	/* ------SETTINGS------ */
+	.buttons {
+		display: grid;
+		grid-template-columns: 1fr;
+		grid-template-rows: 40px;
+		gap-bottom: 5px;
+	}
 	
 }
 

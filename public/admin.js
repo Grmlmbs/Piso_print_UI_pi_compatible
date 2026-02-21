@@ -1,50 +1,26 @@
-//admin login codes
+const logoutBtn = document.getElementById('logoutBtn');
 
-const togglePassword = document.getElementById('togglePassword');
-const passwordField = document.getElementById('password');
-const eyeIcon = document.getElementById('eyeIcon');
-var sidebarOpen = false;
-
-togglePassword.addEventListener('change', function() {
-	// Toggle the type attribute
-	const type = this.checked ? 'text': 'password';
-	passwordField.setAttribute('type', type);
-	
-	// change the icon
-	eyeIcon.src = this.checked ? '/sources/hidden.png' : '/sources/show.png';
-});
-
-async function handleLogin() {
-	const user = document.getElementById('username').value;
-	const pass = document.getElementById('password').value;
-	
-	//Disable button to prevent double-clicks
-	const loginBtn = document.querySelector('button');
-	
-	document.getElementById('loading-overlay').style.display = 'flex';
-	showLoading("Verifying Credentials...");
-	loginBtn.disabled = true;
+// Sidebar codes and behaviours
+logoutBtn.addEventListener('click', async () => {
 	
 	try {
-		const res = await fetch('/admin/login', {
+		// 1. Tell the server to destroy the session
+		const response = await fetch('admin/logout', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ username: user, password: pass })
+			headers: { 'Content-Type': 'application/json' }
 		});
-		const result = await res.json();
+		
+		const result = await response.json();
 		
 		if (result.success) {
-			document.getElementById('loading-overlay').style.display = 'none';
-			window.location.href = result.redirect;
-		} else {
-			document.getElementById('loading-overlay').style.display = 'none';
-			alert(result.message);
-			loginBtn.disabled = false;
+			// 2. Clear frontend flag
+			sessionStorage.clear();
+			
+			window.location.replace('/adminLogin.html');
 		}
 	} catch (err) {
-		document.getElementById('loading-overlay').style.display = 'none';
-		alert(result.message);
-		loginBtn.disabled = false;
+		console.error("Logout failed:", err);
+		//Fallback: force redirect even if server call fails
+		window.location.replace('/adminLogin.html');
 	}
-}
-
+});
