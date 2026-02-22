@@ -348,6 +348,14 @@ body {
 	box-shadow: 0 6px 7px -3px rgba(0,0,0,0.35);
 	margin: 0px 0px 30px;
 }
+.ri-arrow-up-down-line {
+	border-radius: 5px;
+	padding: 3px;
+}
+.ri-arrow-up-down-line:hover {
+	background-color: #15173d;
+	color: #f4f4f4;
+}
 .table-container {
 	height: 600px;
 	overflow-x: auto;
@@ -405,6 +413,15 @@ body {
 	margin-bottom: 20px;
 	align-items: center;
 }
+.input-field-container i {
+	border-radius: 5px;
+}
+.input-field-container i:hover {
+	background-color: #15173d;
+	color: #f4f4f4;
+	opacity: 0.6;
+}
+
 .sub-options-container {
 	display: grid;
 	grid-template-rows: 50px 1fr;
@@ -461,6 +478,10 @@ body {
 	margin: 5px 15px 0px 15px;
 	font-size: 20px;
 }
+
+#conPasswordField {
+	display: none;
+}
 .buttons {
 	display: flex;
 	gap: 15px;
@@ -483,6 +504,10 @@ body {
 .buttons button:hover {
 	background-color: #f4f4f4;
 	color: #15173d;
+}
+.buttons button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 /* -------MEDIA QUERIES --------- */

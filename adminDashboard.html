@@ -170,16 +170,16 @@
 							</div>
 							<div class="table-manipulation-elements-container">
 								<div class="filter-container">
-									<div class="filter">
+									<div class="filter" id="filter">
 										<label for="filter"><i class="ri-filter-2-line"></i></label>
-										<select id="filter" class="custom-filter">
-											<option value="none">None</option>
+										<select id="tran-filter" class="custom-filter">
+											<option value="None">None</option>
 											<option value="Date">Date</option>
-											<option value="amount">Amount</option>
-											<option value="File size">File size</option>
+											<option value="Amount">Amount</option>
+											<option value="File_size">File size</option>
 										</select>
 									</div>
-									<i class="ri-arrow-up-down-line"></i>
+									<i class="ri-arrow-up-down-line" id="sort-direction-btn"></i>
 								</div>
 							</div>
 							<div class="table-container">
@@ -279,26 +279,34 @@
 								<div class="input-field-container">
 									<label for="bw-price-rate">Black and white prints</label>
 									<div class="price-field">
-										<i class="ri-subtract-line"></i>
+										<i class="ri-subtract-line" id="bw-decrem-btn"></i>
 										<input type="text" id="bw-price-rate" placeholder="0">
-										<i class="ri-add-line"></i>
+										<i class="ri-add-line" id="bw-increm-btn"></i>
 									</div>
 								</div>
 								<div class="input-field-container">
 									<label for="color-price-rate">Colored prints</label>
 									<div class="price-field">
-										<i class="ri-subtract-line"></i>
+										<i class="ri-subtract-line" id="col-decrem-btn"></i>
 										<input type="text" id="color-price-rate" placeholder="0">
-										<i class="ri-add-line"></i>
+										<i class="ri-add-line" id="col-increm-btn"></i>
 									</div>
 								</div>
 								<div class="input-field-container">
 									<label for="color-price-rate multiplier">Price multiplier(For colored prints)</label>
 									<div class="price-field">
-										<i class="ri-subtract-line"></i>
+										<i class="ri-subtract-line" id="mult-decrem-btn"></i>
 										<input type="text" id="color-multiplier" placeholder="0">
-										<i class="ri-add-line"></i>
+										<i class="ri-add-line" id="mult-increm-btn"></i>
 									</div>
+								</div>
+							</div>
+							<div class="buttons">
+								<div class="button-container">
+									<button type="button" id="pricing-saveBtn" class="save-btn" disabled>Save</button>
+								</div>
+								<div class="button-container">
+									<button type="button" id="pricing-cancelBtn" class="cancel-btn" disabled>Cancel</button>
 								</div>
 							</div>
 						</div>
@@ -315,20 +323,20 @@
 								<div class="account-input-field-container">
 									<label for="username">Username</label>
 									<div class="pass-container">
-										<input type="text" class="account-field" id="username" placeholder="Username">
+										<input type="text" class="account-field" id="username" placeholder="Username" disabled>
 									</div>
 								</div>
 								<div class="account-input-field-container">
 									<label for="username">Password</label>
 									<div class="pass-container">
-										<input type="password" class="account-field" id="password" placeholder="Password">
+										<input type="password" class="account-field" id="password" placeholder="Password" disabled>
 										<i class="ri-eye-fill" id="eye-icon"></i>
 									</div>
 								</div>
-								<div class="account-input-field-container">
+								<div class="account-input-field-container" id="conPasswordField">
 									<label for="confirm-password">Confirm password</label>
 									<div class="pass-container">
-										<input type="password" class="account-field" id="conPassword" placeholder="Confirm Password">
+										<input type="password" class="account-field" id="conPassword" placeholder="Confirm Password" disabled>
 										<i class="ri-eye-fill"></i>
 									</div>
 								</div>
@@ -338,10 +346,10 @@
 									<button type="button" id="editCredentialsBtn" class="print-btn">Edit Credentials</button>
 								</div>
 								<div class="button-container">
-									<button type="button" id="saveBtn" class="save-btn">Save</button>
+									<button type="button" id="credentials-saveBtn" class="save-btn" disabled>Save</button>
 								</div>
 								<div class="button-container">
-									<button type="button" id="clearBtn" class="cancel-btn">Cancel</button>
+									<button type="button" id="credentials-cancelBtn" class="cancel-btn" disabled>Cancel</button>
 								</div>
 							</div>
 						</div>
@@ -354,6 +362,7 @@
 		<script src="apexcharts.min.js"></script>
 		<script src="dashboard.js"></script>
 		<script src="HistoryAndLogs.js"></script>
+		<script src="Settings.js"></script>
 		<script src="admin.js"></script>
 	</body>
 </html>

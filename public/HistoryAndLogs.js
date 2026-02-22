@@ -1,6 +1,8 @@
 const historyLogsBtn = document.getElementById('historyLogsBtn');
 const errorLogsBtn = document.getElementById('errorLogsBtn');
 const transactionSearchBar = document.getElementById('tran-searchBar');
+const transactionDropDown = document.getElementById('tran-filter');
+const sortBtn = document.getElementById('sort-direction-btn');
 
 function showTab(tabId) {
 	const sections = ['transaction-tab', 'error-tab'];
@@ -38,14 +40,33 @@ errorLogsBtn.addEventListener('click', function() {
 	errorLogsBtn.style.color = "#15173d";
 });
 
-transactionSearchBar.addEventListener('change', function() {
+transactionSearchBar.addEventListener('input', function(event) {
 	populateTranTable()
 });
+
+transactionDropDown.addEventListener('change', function(event) {
+	if (transactionDropDown.value === 'None') {
+		populateTranTable();
+	}
+	populateTranTable();
+});
+
+sortBtn.addEventListener('click', toggleSortDirection);
+
+let sortDirection = 'DESC';
+
+function toggleSortDirection() {
+	const icon = document.getElementById('sort-direction-btn');
+	sortDirection = (sortDirection === 'DESC') ? 'ASC' : 'DESC';
+	
+	populateTranTable();
+}
 
 async function populateTranTable() {
 	const start = document.getElementById('transaction-start-date').value;
 	const end = document.getElementById('transaction-end-date').value;
 	const search = document.getElementById('tran-searchBar').value;
+	const sortBy = document.getElementById('tran-filter').value;
 	
 	const transactionTableBody = document.getElementById('transaction-table-body');
 	
@@ -58,6 +79,8 @@ async function populateTranTable() {
 		params.append('search', search);
 	}
 	
+	params.append('sortBy', sortBy);
+	params.append('order', sortDirection);
 	try {
 		const response = await fetch(`/api/tran-logs?${params.toString()}`);
 		const data = await response.json();
@@ -80,7 +103,7 @@ async function populateTranTable() {
 				<td>${row.Pages}</td>
 				<td>${row.Color}</td>
 				<td>${row.Paper_Size}</td>
-				<td>${row.File_Size}</>
+				<td>${row.File_Size}</td>
 				<td>PHP ${row.Amount.toFixed(2)}</td>
 				<td>${row.Status}</td>
 			`;

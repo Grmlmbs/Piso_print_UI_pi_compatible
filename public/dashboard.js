@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	initializeDateFields(transactionStartInput, transactionEndInput);
 	initializeDateFields(errorStartInput, errorEndInput);
 	
-	updateSalesCard();
+	updateSalesCard();543
 	updateAvgSalesPerTran();
 	updateNumOfTran();
 	updateTotalPagesPrinted();

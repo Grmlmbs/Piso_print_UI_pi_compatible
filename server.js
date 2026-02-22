@@ -384,7 +384,15 @@ app.post('/calculate-cost', async (req, res) => {
         if (!paper || !baseName) return res.json({ success: false, message: 'Missing params' });
         const selectedPages = String(pages || '').split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
         if (!selectedPages.length) return res.json({ success: false, message: 'No pages selected' });
-
+        
+        // Fetch the live rates from the database.
+        const pricing = db.prepare('SELECT * FROM Pricing').get();
+        
+        // declared variables to hold the values from the database.
+        const bwRate = pricing?.bw_charge ?? 5;
+        const colorRate = pricing?.color_charge ?? 10;
+        const multiplierRate = pricing?.multiplier ?? 0.5;
+        
         const dir = path.join(cacheDir, String(paper));
         const files = await fsPromise.readdir(dir);
         // match file numbers present in selectedPages
@@ -415,13 +423,12 @@ app.post('/calculate-cost', async (req, res) => {
             const used = await scanUsedSections(full);
             totalUsedSections += used;
         }
-
-	const baseCost = (color === 'color') ? 10 : 5;
+	const baseCost = (color === 'color') ? colorRate : bwRate;
         const totalPages = matched.length;
         
         // FIX: Calculate section charge based on color mode.
         // The charge is only applied if color is 'color'. Otherwise, it is 0.
-        const sectionCharge = (color === 'color') ? totalUsedSections * 0.5 : 0;
+        const sectionCharge = (color === 'color') ? totalUsedSections * multiplierRate : 0;
         
         // Update total cost calculation to use the conditional sectionCharge
         const totalCost = Math.round((baseCost * totalPages + sectionCharge) * Number(copies || 1));
@@ -840,7 +847,7 @@ app.get('/api/tran-dis-column', (req, res) => {
 
 // API endpoint to fetch the date for the transaction logs.
 app.get('/api/tran-logs', (req, res) => {
-    const { start, end, search } = req.query;
+    const { start, end, search, sortBy, order} = req.query;
     let query = 'SELECT * FROM Transactions';
     
     let params = [];
@@ -861,6 +868,13 @@ app.get('/api/tran-logs', (req, res) => {
         query += ' WHERE ' + conditions.join(' AND ');
     }
     
+    const allowedColumns = ['Date', 'Amount', 'File_Size'];
+    const validSortBy = allowedColumns.includes(sortBy) ? sortBy : 'Date';
+    
+    const validOrder = (order === 'ASC') ? 'ASC' : 'DESC';
+    
+    query += ` ORDER BY ${validSortBy} ${validOrder}`;
+    
     try {
         const rows = db.prepare(query).all(...params);
         res.json(rows);
@@ -869,6 +883,27 @@ app.get('/api/tran-logs', (req, res) => {
     }
 });
     
+// api endpoint to get current pricing
+app.get('/api/settings/pricing', (req, res) => {
+    try {
+        const pricing = db.prepare('SELECT * FROM Pricing').get();
+        res.json(pricing);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/settings/update-pricing', (req, res) => {
+    const { bw_charge, color_charge, multiplier } = req.body;
+    try {
+        db.prepare(`UPDATE Pricing
+                    SET bw_charge = ?, color_charge = ?, multiplier = ?`)
+            .run( bw_charge, color_charge, multiplier);
+        res.json({ message: "Pricing updated successfully!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
     
 app.use(express.static(path.join(__dirname, 'public')));
 

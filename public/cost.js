@@ -36,7 +36,6 @@ async function calculateCost() {
 }
 
 // PRINT BUTTON
-// cost.js - Corrected Print Button
 document.getElementById("printBtn").addEventListener("click", async () => {
     const payment = currentInserted;
 
