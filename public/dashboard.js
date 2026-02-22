@@ -11,7 +11,35 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	const startInput = document.getElementById('dashboard-start-date');
 	const endInput = document.getElementById('dashboard-end-date');
+	const transactionStartInput = document.getElementById('transaction-start-date');
+	const transactionEndInput = document.getElementById('transaction-end-date');
+	const errorStartInput = document.getElementById('error-start-date');
+	const errorEndInput = document.getElementById('error-end-date');
 	
+	initializeDateFields(startInput, endInput);
+	initializeDateFields(transactionStartInput, transactionEndInput);
+	initializeDateFields(errorStartInput, errorEndInput);
+	
+	updateSalesCard();
+	updateAvgSalesPerTran();
+	updateNumOfTran();
+	updateTotalPagesPrinted();
+	updateTranDistributionPie();
+	updateSalesTrendColChart();
+	updateUsageVolLineChart();
+	updateTranDisStatColumn();
+	
+	// refresh every minute.
+	setInterval(updateSalesCard, 60000);
+	setInterval(updateAvgSalesPerTran, 60000);
+	setInterval(updateNumOfTran, 60000);
+	setInterval(updateTotalPagesPrinted, 60000);
+	setInterval(updateTranDistributionPie, 60000);
+	setInterval(updateSalesTrendColChart, 60000);
+	setInterval(updateUsageVolLineChart, 60000);
+	setInterval(updateTranDisStatColumn, 60000);
+});
+function initializeDateFields(startInput, endInput) {
 	if (startInput && endInput) {
 		
 		startInput.addEventListener('change', handleDateChange);
@@ -27,23 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		startInput.value = yesterdayStr;
 		endInput.value = todayStr;
 	}
+}
 	
-	updateSalesCard();
-	updateAvgSalesPerTran();
-	updateNumOfTran();
-	updateTotalPagesPrinted();
-	updateTranDistributionPie();
-	updateSalesTrendColChart();
-	
-	// refresh every minute.
-	setInterval(updateSalesCard, 60000);
-	setInterval(updateAvgSalesPerTran, 60000);
-	setInterval(updateNumOfTran, 60000);
-	setInterval(updateTotalPagesPrinted, 60000);
-	setInterval(updateTranDistributionPie, 60000);
-	setInterval(updateSalesTrendColChart, 60000);
-});
-
 function openSidebar() {
     if (!sidebarOpen) {
         sidebar.classList.add("sidebar-responsive");
@@ -141,6 +154,9 @@ function handleDateChange() {
 	updateTotalPagesPrinted();
 	updateTranDistributionPie();
 	updateSalesTrendColChart();
+	updateUsageVolLineChart();
+	updateTranDisStatColumn();
+	populateTranTable();
 }
 
 //'change' eventListener to update dashboard on date change.
@@ -258,7 +274,7 @@ async function updateTranDistributionPie() {
 		const data = await response.json();
 		
 		const statusCount = data.map(item => item.count);
-		const statusLabels = data.map(item => item.Status);
+		const statusLabels = data.map(item => item.simplifiedStatus);
 		
 		if (pieChart) {
 			pieChart.destroy();
@@ -316,7 +332,7 @@ async function updateSalesTrendColChart() {
 		
         var options = {
           series: [{
-          name: 'Net Profit',
+          name: 'Sales',
           data: amounts
         }],
           chart: {
@@ -366,11 +382,34 @@ async function updateSalesTrendColChart() {
 	}
 }
         
-// line-chart code
+// volume of usage trend codes
+let lineChart = null;
+async function updateUsageVolLineChart() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	if (lineChart) {
+		lineChart.destroy();
+	}
+	
+	try {
+		const response = await fetch('/api/usage-vol' + dateParams);
+		const data = await response.json();
+		
+		const formattedHours = data.map(item => {
+			const hourObj = new Date();
+			hourObj.setHours(item.Hour, 0, 0);
+			
+			return hourObj.toLocaleString('en-US', { hour: 'numeric', hour12: 'true' });
+		});
+		
+		const count = data.map(item => item.Count);
         var options = {
           series: [{
-            name: "Desktops",
-            data: [10, 41, 35, 51, 49, 62, 69, 91, 148]
+            name: "Usage Volume",
+            data: count
         }],
           chart: {
           height: 350,
@@ -385,10 +424,6 @@ async function updateSalesTrendColChart() {
         stroke: {
           curve: 'straight'
         },
-        title: {
-          text: 'Product Trends by Month',
-          align: 'left'
-        },
         grid: {
           row: {
             colors: ['#f3f3f3', 'transparent'], // takes an array which will be repeated on columns
@@ -396,25 +431,53 @@ async function updateSalesTrendColChart() {
           },
         },
         xaxis: {
-          categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+          categories: formattedHours,
         }
         };
 
-        var chart = new ApexCharts(document.querySelector("#line-chart"), options);
-        chart.render();
-
+        lineChart = new ApexCharts(document.querySelector("#line-chart"), options);
+        lineChart.render();
+	} catch (err) {
+		console.error("Error updating the volume of usage trend line chart");
+	}
+}
 // Transaction distribution status
+let tranDisStatus = null;
+async function updateTranDisStatColumn() {
+	const start = document.getElementById('dashboard-start-date').value;
+	const end = document.getElementById('dashboard-end-date').value;
+	
+	const dateParams = (start && end) ? `?start=${start}&end=${end}`: '';
+	
+	if (tranDisStatus) {
+		tranDisStatus.destroy();
+	}
+	
+	try {
+		const response = await fetch('/api/tran-dis-column' + dateParams);
+		const data = await response.json();
+		
+		const rawMonths = [...new Set(data.map(item => item.Month))];
+    
+		const displayMonths = rawMonths.map(m => {
+			const dateObj = new Date(m + "-01");
+			return dateObj.toLocaleString('default', { month: 'short', year: 'numeric' });
+		});
+		
+		const statuses = ['completed', 'pending', 'cancelled', 'printing'];
+		
+		const seriesData = statuses.map(statusName => {
+			return {
+				name: statusName.charAt(0).toUpperCase() + statusName.slice(1),
+
+				data: rawMonths.map(m => {
+					const match = data.find(item => item.Month === m && item.Status === statusName);
+					return match ? match.TransactionCount : 0;
+				})
+			};
+		});
         var options = {
-          series: [{
-          name: 'Net Profit',
-          data: [44, 55, 57, 56, 61, 58, 63, 60, 66]
-        }, {
-          name: 'Revenue',
-          data: [76, 85, 101, 98, 87, 105, 91, 114, 94]
-        }, {
-          name: 'Free Cash Flow',
-          data: [35, 41, 36, 26, 45, 48, 52, 53, 41]
-        }],
+          series: seriesData,
           chart: {
           type: 'bar',
           height: 350
@@ -436,11 +499,11 @@ async function updateSalesTrendColChart() {
           colors: ['transparent']
         },
         xaxis: {
-          categories: ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+          categories: displayMonths,
         },
         yaxis: {
           title: {
-            text: '$ (thousands)'
+            text: 'Number of Transactions'
           }
         },
         fill: {
@@ -449,11 +512,15 @@ async function updateSalesTrendColChart() {
         tooltip: {
           y: {
             formatter: function (val) {
-              return "$ " + val + " thousands"
+              return "Transactions " + val
             }
           }
         }
         };
 
-        var chart = new ApexCharts(document.querySelector("#Transaction-distribution-status"), options);
-        chart.render();
+        tranDisStatus = new ApexCharts(document.querySelector("#Transaction-distribution-status"), options);
+        tranDisStatus.render();
+	} catch (err) {
+		console.error("Error loading status trend:", err);
+	}
+}

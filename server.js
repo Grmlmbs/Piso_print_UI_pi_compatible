@@ -732,7 +732,15 @@ app.get('/api/total-pages-printed', (req, res) => {
 // An API endpoint to fetch the data for the distribution of transaction pie chart
 app.get('/api/dist-tran-pie', (req, res) => {
     const {start, end } = req.query;
-    let query = 'SELECT Status, COUNT(*) AS count FROM Transactions';
+    let query = `
+        SELECT
+            CASE
+            WHEN Status = 'completed' THEN 'Completed'
+            ELSE 'Unfinished'
+            END AS simplifiedStatus,
+            COUNT(*) AS count
+            FROM Transactions
+        `;
     let params = [];
     
     if (start && end) {
@@ -740,7 +748,7 @@ app.get('/api/dist-tran-pie', (req, res) => {
         params = [start, end];
     }
     
-    query += ' GROUP BY Status';
+    query += ' GROUP BY simplifiedStatus';
     
     try {
         const rows = db.prepare(query).all(...params);
@@ -777,7 +785,91 @@ app.get('/api/sales-trend', (req, res) => {
         res.status(500).json({ error: "Failed to fetch sales trends" });
     }
 });
+// API endpoint to fetch the data for the volume of usage by the hour.
+app.get('/api/usage-vol', (req, res) => {
+    const { start, end } =  req.query;
+    let query = `
+        SELECT
+            strftime('%H', Date) AS Hour,
+            COUNT(*) AS Count
+        FROM Transactions
+        `;
+    
+    let params = [];
+    
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    query += ' GROUP BY Hour';
+    
+    try {
+        const rows = db.prepare(query).all(...params);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// API endpoint to fetch the data for the Transaction status distribution
+app.get('/api/tran-dis-column', (req, res) => {
+    const { start, end } = req.query;
+    let query = `
+        SELECT
+            strftime('%Y-%m', Date) AS Month,
+            Status,
+            COUNT(*) AS TransactionCount
+        FROM Transactions
+    `;
+    
+    let params = [];
+    
+    if (start && end) {
+        query += ' WHERE Date BETWEEN ? AND ?';
+        params = [start, end];
+    }
+    
+    query += ' GROUP BY Month, Status';
+    try {
+        const rows = db.prepare(query).all(...params);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
+// API endpoint to fetch the date for the transaction logs.
+app.get('/api/tran-logs', (req, res) => {
+    const { start, end, search } = req.query;
+    let query = 'SELECT * FROM Transactions';
+    
+    let params = [];
+    let conditions = [];
+    
+    if (start && end) {
+        conditions.push('Date BETWEEN ? AND ?');
+        params.push(`${start}T00:00:00.000Z`, `${end}T23:59:59.999Z`);
+    }
+    
+    if (search) {
+        conditions.push('Transaction_Id LIKE ?');
+        const term = `%${search}%`;
+        params.push(term);
+    }
+    
+    if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    try {
+        const rows = db.prepare(query).all(...params);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+    
+    
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
