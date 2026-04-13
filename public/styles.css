@@ -10,6 +10,10 @@
     box-sizing: border-box;
 }
 
+.ursLogo {
+    margin: 50px;
+}
+
 .cost-action-area {
     display: flex;
     gap: 10px;
@@ -251,7 +255,7 @@ body {
     background: #fff;
     padding: 20px;
     border-radius: 10px;
-
+    
     display: flex;
     gap: 20px;
 }
@@ -289,7 +293,38 @@ form {
     flex-direction: column;
     gap: 15px;
 }
+/* Container for the back button */
+.top {
+    top: 0;
+    left: 0;
+    background: #f4f4f4; 
+    display: flex;
+    justify-content: flex-start;
+}
 
+/* Your original button design with minor position tweaks */
+.btn-back-corner {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    background-color: #f4f4f4;
+    color: #15173d;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s;
+}
+
+.btn-back-corner:hover {
+    background-color: #15173d;
+    color: white;
+}
+
+/* Ensure the main container doesn't have huge top margins now */
+.container {
+    margin-top: 10px; 
+}
 /* INPUTS */
 input[type="file"], select, input[type="number"], input[type="text"] {
     flex: 1;
@@ -415,6 +450,17 @@ button:hover {
 @media (max-width: 900px) {
     .container {
         flex-direction: column; /* STACK ON MOBILE */
+    }
+    
+    .top {
+        width: auto; /* Prevent the container from forcing block behavior */
+        display: inline-block; /* Only take up as much space as the button needs */
+    }
+
+    .top .btn-back-corner {
+        width: auto !important; /* Force it to ignore the global "button { width: 100% }" rule */
+        padding: 8px 15px;      /* Keep your original padding */
+        display: inline-flex;   /* Keep the icon and text side-by-side */
     }
 }
 

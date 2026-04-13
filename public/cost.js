@@ -103,32 +103,7 @@ document.getElementById("printBtn").addEventListener("click", async () => {
 document.getElementById("cancelBtn").addEventListener("click", async () => {
     // Show laoding overlay
     
-    if (typeof showLoading === "function") {
-        showLoading("Cancelling transaction...");
-    }
-    
-    try {
-        // Update transaction as CANCELLED
-        await fetch("/transaction/update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                id,
-                Amount: 0,
-                Status: "cancelled"
-            })
-        });
-
-        // Delete uploaded PDFs/images
-        await fetch("/balance/reset", { method: "POST" });
-        await fetch(`/delete-last/${baseName}`, { method:"DELETE" });
-        
-        // Return to home
-        window.location.href = "/upload.html";
-    } catch (err) {
-        console.error("Cancel Error:", err);
-        window.location.href = "/upload.html";
-    }
+    window.history.back();
 });
 
 const socket = io(); 

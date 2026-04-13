@@ -82,6 +82,24 @@ const checkAuth = (req, res, next) => {
         res.redirect('/adminLogin.html');
     }
 };
+// --- BACKGROUND CLEANUP ---
+// Cancels transactions older than 30 minutes every 5 minutes
+setInterval(() => {
+    // Match the ISO format used in your /transaction/save route
+    const cutoff = new Date(Date.now() - 30 * 60000).toISOString();
+    
+    try {
+        const result = db.prepare("UPDATE Transactions SET Status = 'cancelled' WHERE Status = 'pending' AND Date < ?")
+          .run(cutoff);
+        
+        if (result.changes > 0) {
+            console.log(`[CLEANUP] Cancelled ${result.changes} abandoned transactions.`);
+        }
+    } catch (err) {
+        console.error("[CLEANUP ERROR]", err.message);
+    }
+}, 5 * 60000); // Runs every 5 minutes
+
 
 app.get('/adminDashboard.html', checkAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'adminDashboard.html'));
@@ -442,11 +460,10 @@ app.post('/calculate-cost', async (req, res) => {
 });
 
 // Transaction create
-app.post('/transaction/create', (req, res) => {
+app.post('/transaction/save', (req, res) => {
     try {
-        // 1. Extract everything from req.body once at the very beginning
-        // We use 'let' so we can modify Amount, Copies, and Status later in the logic
         let { 
+            id, // Added: check if an ID was passed from the session
             Date: dateString, 
             Amount, 
             Color, 
@@ -458,12 +475,9 @@ app.post('/transaction/create', (req, res) => {
             Status 
         } = req.body;
 
-        // 2. Safety check: Count the pages using the 'Pages' variable declared above
-        // Fixed: changed p = p.trim() to p => p.trim()
+        // --- 1. Common Validation & Safety Checks ---
         const numCopies = Math.max(1, Math.floor(Number(Copies) || 1));
-        Copies = numCopies;
         const pageList = (Pages || "").split(',').filter(p => p.trim() !== "");
-        
         const totalSheets = pageList.length * numCopies;
         
         if (totalSheets > 5) {
@@ -473,42 +487,43 @@ app.post('/transaction/create', (req, res) => {
             });
         }
 
-        // 3. Validation Logic
-        if (!dateString || isNaN(new Date(dateString))) return res.json({ success: false, message: "Invalid date." });
-        
-        Amount = Number(Amount); 
-        Copies = Number(Copies);
-        if (isNaN(Amount) || Amount < 0) Amount = 0;
-        if (isNaN(Copies) || Copies < 1) return res.json({ success: false, message: "Invalid number of copies." });
-
+        Amount = Number(Amount) || 0;
         const allowedColors = ["bw", "color"];
-        if (!allowedColors.includes(Color)) return res.json({ success: false, message: "Invalid color selection." });
-
-        if (typeof Pages !== "string" || !Pages.match(/^[0-9,\-\s]+$/)) return res.json({ success: false, message: "Invalid page selection." });
+        if (!allowedColors.includes(Color)) return res.json({ success: false, message: "Invalid color." });
         
         const allowedSizes = ["letter", "legal"];
-        if (!allowedSizes.includes(Paper_Size)) return res.json({ success: false, message: "Invalid paper size." });
-        
-        if (typeof File_Path !== "string" || File_Path.length > 200) return res.json({ success: false, message: "Invalid file path." });
+        if (!allowedSizes.includes(Paper_Size)) return res.json({ success: false, message: "Invalid size." });
 
         const allowedStatuses = ["pending", "printing", "completed", "cancelled"];
         if (!allowedStatuses.includes(Status)) Status = "pending";
 
-        // 4. Database Transaction
-        const createTx = db.transaction(() => {
-            const stmt = db.prepare(`
-                INSERT INTO Transactions
-                (Date, Amount, Color, Pages, Copies, Paper_Size, File_Path, File_Size, Status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `);
-            return stmt.run(dateString, Amount, Color, Pages, Copies, Paper_Size, File_Path, File_Size, Status);
+        // --- 2. Database Logic (Update if ID exists, else Insert) ---
+        const saveTx = db.transaction(() => {
+            if (id) {
+                // UPDATE existing record (User came back from Cost page and changed settings)
+                const stmt = db.prepare(`
+                    UPDATE Transactions
+                    SET Color = ?, Pages = ?, Copies = ?, Paper_Size = ?, Date = ?, Status = ?
+                    WHERE Transaction_Id = ?
+                `);
+                stmt.run(Color, Pages, numCopies, Paper_Size, dateString, Status, id);
+                return { lastInsertRowid: id };
+            } else {
+                // INSERT new record (First time clicking Proceed)
+                const stmt = db.prepare(`
+                    INSERT INTO Transactions
+                    (Date, Amount, Color, Pages, Copies, Paper_Size, File_Path, File_Size, Status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `);
+                return stmt.run(dateString, Amount, Color, Pages, numCopies, Paper_Size, File_Path, File_Size, Status);
+            }
         });
 
-        const result = createTx();
+        const result = saveTx();
         res.json({ success: true, id: result.lastInsertRowid });
 
     } catch (error) {
-        console.error('transaction/create error', error);
+        console.error('transaction/save error', error);
         res.json({ success: false, message: error.message });
     }
 });
@@ -620,7 +635,7 @@ parser.on('data', (data) => {
         if (isAcceptingCoins) {
             userBalance += 1; 
             console.log(`[SOCKET] Broadcasting New Balance: ₱${userBalance}`);
-            io.emit('upadte_balance', userBalance);
+            io.emit('update_balance', userBalance);
         } else {
             console.log("[PAYMENT Rejected: Session not started yet.");
         }

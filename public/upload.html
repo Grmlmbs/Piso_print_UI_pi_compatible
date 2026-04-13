@@ -4,18 +4,24 @@
     <title>Upload PDF and Preview</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="fonts/remixicon.css">
 </head>
 
 <body>
+    <div class="top">
+        <button type="button" id="backToLandingBtn" class="btn-back-corner">
+            <i class="ri-arrow-left-fill"></i>
+            Back
+            </button>
+    </div>
     <div class="container">
-
         <!-- LEFT SIDE — PREVIEW -->
         <div class="preview-container">
             <h2>Preview</h2>
 
             <form id="uploadForm">
-                <input type="file" name="pdfFile" accept="application/pdf" required />
-                <button type="submit">Upload PDF</button>
+                <input type="file" name="pdfFile" accept="application/pdf" style="display: none;" required />
+                <button type="button" id="uploadBtn">Upload PDF</button>
                 <div id="preview">
                     <div id="preview-overlay" class="hidden">
                         <div class="overlay-content">
@@ -65,8 +71,8 @@
                     <div class="setting-row">
                         <label for="paperSize">Paper Size:</label>
                         <select id="paperSize">
-                            <option value="letter" selected>Letter (short)</option>
-                            <option value="legal">Legal (long)</option>
+                            <option value="letter" selected>Letter (short) - 8"x11"</option>
+                            <option value="legal">Legal (long) - 8"x13"</option>
                         </select>
                     </div>
                 </div>
@@ -74,7 +80,7 @@
                 
                 <div class="buttons">
                     <button type="button" id="proceedBtn">Proceed</button>
-                    <button type="button" id="clearBtn">Clear</button>
+                    <button type="button" id="clearBtn" hidden>Clear</button>
                 </div>
 
             </form>

@@ -5,19 +5,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("uploadForm");
     const preview = document.getElementById("preview");
     const fileInput = form.querySelector("input[type='file']");
-    const uploadButton = form.querySelector("button[type='submit']");
+    const uploadButton = document.getElementById("uploadBtn");
     const pageMode = document.getElementById("pageMode");
     const pagesInput = document.getElementById("pages");
     const customWrapper = document.getElementById("customPageWrapper");
     const copiesInput = document.getElementById("copies");
     const colorSelect = document.getElementById("color");
     const paperSelect = document.getElementById("paperSize");
-    const clearButton = document.getElementById("clearBtn");
+    //const clearButton = document.getElementById("clearBtn");
     const proceedBtn = document.getElementById("proceedBtn");
     const previewOverlay = document.getElementById("preview-overlay");
     const overlayText = document.getElementById("overlay-text");
     const loaderSpinner = document.getElementById("loader-spinner");
-
     // Elements to control for the disabled state
     const settingsElements = [
         pageMode, copiesInput, colorSelect, paperSelect, proceedBtn
@@ -30,10 +29,26 @@ document.addEventListener("DOMContentLoaded", () => {
     let totalPages = 0;
     let allPagesImages = { letter: [], legal: [] };
     let lastUploadedSize = 0;
-
+    
     // =========================
     // HELPER: CONTROL SETTINGS STATE
     // =========================
+    let timeout;
+
+    function resetTimer() {
+        clearTimeout(timeout);
+        // If no action for 120 seconds, go back to home and wipe data
+        timeout = setTimeout(() => {
+            sessionStorage.clear();
+            window.location.href = "/"; 
+        }, 120000); 
+    }
+
+    // Reset the timer whenever the user clicks or touches the screen
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('touchstart', resetTimer);
+    resetTimer();
+    
     function setSettingsDisabledState(isDisabled) {
         // Disable/enable main settings elements
         settingsElements.forEach(el => {
@@ -45,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pagesInput.disabled = isDisabled || !isCustom;
         
         // Clear button is enabled only if there's an uploaded file
-        clearButton.disabled = isDisabled || !lastUploadedBaseName;
+        //clearButton.disabled = isDisabled || !lastUploadedBaseName;
     }
 
     // =========================
@@ -64,13 +79,77 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!isCustom) pagesInput.value = "";
         updatePreview();
+        saveState();
     });
 
     // =========================
     // RESET FORM
     // =========================
+    
+uploadButton.addEventListener("click", () => {
+    fileInput.click();
+});
+// =========================
+    // PERSISTENCE LOGIC
+    // =========================
+
+    function saveState() {
+        const state = {
+            lastUploadedBaseName,
+            totalPages,
+            allPagesImages,
+            lastUploadedSize,
+            color: colorSelect.value,
+            pageMode: pageMode.value,
+            customPages: pagesInput.value,
+            copies: copiesInput.value,
+            paperSize: paperSelect.value,
+            transactionId: window.currentTransactionId // Keep track of DB row
+        };
+        // Store as a string in the browser's tab-specific memory
+        sessionStorage.setItem("pisoPrintState", JSON.stringify(state));
+    }
+
+    function loadState() {
+        const saved = sessionStorage.getItem("pisoPrintState");
+        if (!saved) return; // Nothing saved, start fresh
+
+        try {
+            const state = JSON.parse(saved);
+            
+            // Restore Global Variables
+            lastUploadedBaseName = state.lastUploadedBaseName;
+            totalPages = state.totalPages;
+            allPagesImages = state.allPagesImages;
+            lastUploadedSize = state.lastUploadedSize;
+            window.currentTransactionId = state.transactionId;
+
+            // Restore Form Inputs
+            colorSelect.value = state.color;
+            pageMode.value = state.pageMode;
+            pagesInput.value = state.customPages;
+            copiesInput.value = state.copies;
+            paperSelect.value = state.paperSize;
+
+            // If a file was already uploaded, re-enable the UI and show thumbnails
+            if (lastUploadedBaseName) {
+                setSettingsDisabledState(false);
+                const isCustom = pageMode.value === "custom";
+                pagesInput.disabled = !isCustom;
+                customWrapper.classList.toggle("show", isCustom);
+                updatePreview();
+            }
+        } catch (e) {
+            console.error("Error loading saved state:", e);
+            sessionStorage.removeItem("pisoPrintState");
+        }
+    }
+
+    // CRITICAL: Call loadState immediately when the page loads
+    loadState();
 async function resetForm() {
         form.reset();
+        sessionStorage.removeItem("pisoPrintState");
         preview.innerHTML = "";
 
         totalPages = 0;
@@ -101,77 +180,58 @@ async function resetForm() {
             lastUploadedBaseName = null;
         }
     }
-
+/*
     clearButton.addEventListener("click", e => {
         e.preventDefault();
         resetForm();
     });
-
+*/
     // =========================
     // CUSTOM PAGE PARSING
     // =========================
-    function parsePageSelection(input, totalPages) {
-        if (!input) return [];
+function parsePageSelection(input, totalPages) {
+    if (!input || !totalPages) return [];
 
-        //const ranges = input.split(",").map(s => s.trim()).filter(s => s !== "");
-        const pages = new Set();
-        const parts = input.split(",");
+    const pages = new Set();
+    const parts = input.split(",");
+    
+    parts.forEach(part => {
+        part = part.trim();
         
-        parts.forEach(part => {
-            part = part.trim();
-            
-            //Handle Ranges (e.g., 1-3)
-            if (part.includes("-")) {
-                const rangeParts = part.split("-");
-                if (rangeParts.length === 2) {
-                    let start = parseInt(rangeParts[0]);
-                    let end = parseInt(rangeParts[1]);
+        // Handle Ranges (e.g., 1-10)
+        if (part.includes("-")) {
+            const rangeParts = part.split("-");
+            if (rangeParts.length === 2) {
+                let start = parseInt(rangeParts[0]);
+                let end = parseInt(rangeParts[1]);
+                
+                if (!isNaN(start) && !isNaN(end)) {
+                    // VALIDATION: Keep values between 1 and the actual totalPages
+                    const s = Math.max(1, Math.min(start, totalPages));
+                    const e = Math.max(1, Math.min(end, totalPages));
                     
-                    if (!isNaN(start) && !isNaN(end)) {
-                        // Keep values within 1 and the ttal page count
-                        const s = Math.max(1, Math.min(start, totalPages));
-                        const e = Math.max(1, Math.min(end, totalPages));
-                        const realStart = Math.min(s, e);
-                        const realEnd = Math.max(s, e);
-                        
-                        for (let i = realStart; i <= realEnd; i++) {
-                            pages.add(i);
-                        }
+                    const realStart = Math.min(s, e);
+                    const realEnd = Math.max(s, e);
+                    
+                    for (let i = realStart; i <= realEnd; i++) {
+                        pages.add(i);
                     }
                 }
             }
-            // Handle Single Numbers (e.g., 5)
-            else {
-                const num = parseInt(part);
-                if (!isNaN(num) && num >= 1 && num <= totalPages) {
-                    pages.add(num);
-                }
-            }
-        });
-        return Array.from(pages).sort((a, b) => a - b);
-            
-        /*
-        for (let part of ranges) {
-            if (/^\d+-\d+$/.test(part)) {
-                let [start, end] = part.split("-").map(Number);
-
-                start = Math.max(1, Math.min(start, totalPages));
-                end = Math.max(1, Math.min(end, totalPages));
-                if (start > end) [start, end] = [end, start];
-
-                for (let i = start; i <= end; i++) pages.add(i);
-            }
-
-            else if (/^\d+$/.test(part)) {
-                let num = Math.max(1, Math.min(Number(part), totalPages));
+        }
+        // Handle Single Numbers (e.g., 5)
+        else {
+            const num = parseInt(part);
+            // VALIDATION: Only add if the number is within 1 and totalPages
+            if (!isNaN(num) && num >= 1 && num <= totalPages) {
                 pages.add(num);
             }
         }
+    });
 
-        //pagesInput.value = correctedParts.join(", ");
-        return [...pages].sort((a, b) => a - b);
-        */
-    }
+    // Convert Set to Array and sort numerically
+    return Array.from(pages).sort((a, b) => a - b);
+}
 
     function getSelectedPages() {
         if (!totalPages) return [];
@@ -294,14 +354,20 @@ function updatePreview() {
 }
 
     // Live update handlers
-    [pagesInput, copiesInput].forEach(el => el.addEventListener("input", updatePreview));
-    [colorSelect, paperSelect].forEach(el => el.addEventListener("change", updatePreview));
+    [pagesInput, copiesInput].forEach(el => el.addEventListener("input", () => {
+    updatePreview();
+    saveState();
+    }));
 
+    [colorSelect, paperSelect, pageMode].forEach(el => el.addEventListener("change", () => {
+    updatePreview();
+    saveState();
+    }));
     // =========================
     // FILE UPLOAD HANDLER
     // =========================
-    
-    
+
+/*    
    form.addEventListener("submit", async e => {
     e.preventDefault();
     
@@ -360,7 +426,24 @@ function updatePreview() {
         form.classList.remove("uploading");
     }
 });
+*/
+    // BACK BUTTON
+    const backToLandingBtn = document.getElementById("backToLandingBtn");
 
+    if (backToLandingBtn) {
+        backToLandingBtn.addEventListener("click", () => {
+            // 1. Clear the browser's session memory (Wipes PDF info and settings)
+            sessionStorage.removeItem("pisoPrintState");
+        
+            // 2. Clear the transaction ID (Ensures the next user gets a new DB row)
+            window.currentTransactionId = null;
+
+            // 3. Redirect to your landing page
+            // Use "/" if it's your root, or "index.html" / "landing.html"
+            window.location.href = "/"; 
+        });
+    }
+    
     // =========================
     // PROCEED BUTTON
     // =========================
@@ -371,12 +454,17 @@ function updatePreview() {
         // The check remains, but now totalPages should be correct
         if (!selectedPages.length) return alert("Select pages first."); 
 
+        const saved = sessionStorage.getItem("pisoPrintState");
+        const state = saved ? JSON.parse(saved) : {};
+        const existingId = state.transactionId || null;
+        
         if (typeof showLoading === "function") {
             showLoading("Creating transaction and calculating costs...");
         }
         
         setTimeout(async () => {
         const data = {
+            id: existingId,
             Date: new Date().toISOString(),
             Amount: 0,
             Color: colorSelect.value,
@@ -391,7 +479,7 @@ function updatePreview() {
         try {
             
             await fetch('/balance/start-session', { method: 'POST' });
-            const response = await fetch("/transaction/create", {
+            const response = await fetch("/transaction/save", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
@@ -403,11 +491,13 @@ function updatePreview() {
                 return alert(result.message || "Transaction failed.");
             }
             
-            const query =
-                `?id=${result.id}&pages=${data.Pages}&copies=${data.Copies}` +
-                `&color=${data.Color}&paper=${data.Paper_Size}&baseName=${data.File_Path}`;
+            state.transactionId = result.id;
+            sessionStorage.setItem("pisoPrintState", JSON.stringify(state));
+            
+            const query = `?id=${result.id}&pages=${data.Pages}&copies=${data.Copies}` +
+                      `&color=${data.Color}&paper=${data.Paper_Size}&baseName=${data.File_Path}`;
 
-            window.location.href = `/cost.html${query}`;
+        window.location.href = `/cost.html${query}`;
         } catch (err) {
             console.error(err);
             hideLoading();
@@ -434,50 +524,123 @@ function updatePreview() {
     });
     
     // Clear the fields and preview whenever there were change of mind uploads
-    fileInput.addEventListener("change", () => {
-        // Clear the preview container
-        //preview.innerHTML = "";
-        const oldImages = preview.querySelectorAll("img");
-        oldImages.forEach(img => img.remove());
+    // 3. Trigger the upload process automatically when a file is selected
+fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    // 1. FULL RESET: Clear old state before starting the new upload
+    // This ensures copies, page modes, and internal variables are wiped
+    sessionStorage.removeItem("pisoPrintState");
+    lastUploadedBaseName = null; 
+    totalPages = 0;
+    allPagesImages = { letter: [], legal: [] };
+    
+    // 2. UI RESET: Clear preview and show loading
+    form.classList.add("uploading");
+    preview.classList.remove("no-scroll");
+    
+    previewOverlay.classList.remove("hidden");
+    loaderSpinner.style.display = "block";
+    overlayText.innerText = "Processing PDF...Please wait.";
+
+    // 3. FIELD RESET: Set inputs back to defaults
+    colorSelect.value = "bw"; 
+    paperSelect.value = "letter";
+    pageMode.value = "all";
+    pagesInput.value = "";
+    copiesInput.value = "1";
+    customWrapper.classList.remove("show");
+
+    const formData = new FormData();
+    formData.append("pdfFile", file);
+
+    try {
+        const response = await fetch("/upload", { method: "POST", body: formData });
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || "Upload failed.");
+            previewOverlay.classList.add("hidden");
+            form.classList.remove("uploading");
+            setSettingsDisabledState(true);
+            return;
+        }
+
+        // 4. APPLY NEW DATA: Populate state with the new file's info
+        lastUploadedBaseName = result.baseName;
+        totalPages = result.totalPages; 
+        lastUploadedSize = result.fileSize || 0;
+        handlePreviewImages(result.images, result.totalPages); 
         
-        // Reset the settings form to default values
-        // This resets color, pageMode, copies, and paperSize
-        const settingsForm = document.getElementById("settingsForm");
-        if (settingsForm) settingsForm.reset();
+        form.classList.remove("uploading");
+        setSettingsDisabledState(false);
         
-        // Explicitly handle UI-controlled states 
-        // Reset internal state variables
-        totalPages = 0;
-        allPagesImages = { letter: [], legal: [] };
-        lastUploadedBaseName = null;
-        
-        // Disable settings until the new file is uploaded
-        setSettingsDisabledState(true);
-        
-        // Hide the custom pages input wrapper
-        customWrapper.classList.remove("show");
-        pagesInput.value = "";
-        
-        // Hide any existing limit warnings
-        const limitWarning = document.getElementById("limit-warning");
-        if (limitWarning) limitWarning.style.display = "none";
-        
+        // Use server-detected defaults if available
+        if (result.detectedColor) colorSelect.value = result.detectedColor;
+        if (["letter", "legal"].includes(result.originalSize)) {
+            paperSelect.value = result.originalSize;
+        }
+
+        updatePreview(); 
+        saveState();
+    } catch (err) {
+        console.error(err);
+        alert("Upload error.");
         previewOverlay.classList.add("hidden");
-        overlayText.innerHTML = "Processing PDF...Please wait.";
-        
-        lastUploadedSize = 0;
-        console.log("File changed: Settings reset and preview cleared.")
-    });
+        form.classList.remove("uploading");
+        setSettingsDisabledState(true);
+    }
+});
     
     pageMode.addEventListener("change", updatePreview);
     
     pagesInput.addEventListener("input", (e) => {
-        // Remove any character that isn't a digit, comma, or hyphen
-        e.target.value = e.target.value.replace(/[^0-9,-]/g, "");
-        updatePreview();
+    // 1. Sanitize: Remove any character that isn't a digit, comma, or hyphen
+    let value = e.target.value.replace(/[^0-9,-]/g, "");
+
+    // 2. Validate: Split by comma and check each part against totalPages
+    const parts = value.split(",");
+    const validatedParts = parts.map(part => {
+        if (part.includes("-")) {
+            // Handle range: e.g., "1-12"
+            const range = part.split("-");
+            let start = range[0];
+            let end = range[1];
+            
+            // If the user finished typing 'end', check if it's too high
+            if (end !== "" && parseInt(end) > totalPages) {
+                return `${start}-${totalPages}`;
+            }
+            return part;
+        } else {
+            // Handle single number: e.g., "12"
+            if (part !== "" && parseInt(part) > totalPages) {
+                return totalPages.toString();
+            }
+            return part;
+        }
     });
+
+    // 3. Rewrite the input field value so the user sees the correction
+    e.target.value = validatedParts.join(",");
+
+    // 4. Update the thumbnails
+    updatePreview();
+    saveState();
+});
     
     
-    paperSelect.addEventListener("change", updatePreview);
-    
+    paperSelect.addEventListener("change", () => {
+        updatePreview();
+        saveState();
+    });
+    colorSelect.addEventListener("change", () => {
+        saveState(); 
+    });
+
+    copiesInput.addEventListener("input", () => {
+        saveState();
+    });
+    loadState();
 }); // End of DOMContentLoaded listener

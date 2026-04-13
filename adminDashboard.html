@@ -16,11 +16,13 @@
 					<i class="ri-menu-fold-2-fill"></i>Menu
 				</div>
 				<div class="header-left"></div>
+				<!--
 				<div class="header-right">
 					<i class="ri-printer-fill"></i>
 					<i class="ri-file-paper-fill"></i>
 					<i class="ri-drop-fill"></i>
 				</div>
+				-->
 			</header>
 			<!-- end -->
 			
@@ -129,135 +131,67 @@
 						</div>
 					</div>
 				</div>
-				<div id="history-and-logs">
-					<div class="main-title">
-						<i class="ri-file-history-fill"></i>
-						<h2>HISTORY AND LOGS</h2>
-					</div>
-					<div class="tabs-container">
-						<ul class="tab-list">
-							<li class="tab-list-item" id="historyLogsBtn">
-								<span>
-									<i class="ri-file-history-line"></i>
-									Transactions
-								</span>
-							</li>
-							<li class="tab-list-item" id="errorLogsBtn">
-								<span>
-									<i class="ri-file-warning-line"></i>
-									Errors
-								</span>
-							</li>
-						</ul>
-					</div>
-					<div id="transaction-tab">
-						<div class="manipulation-elements-container">
-							<div class="Date-slicer">
-								<label for="start-date">Date:</label>
-								<input type="date" id="transaction-start-date">
-								<label for="end-date">-</label>
-								<input type="date" id="transaction-end-date">
-							</div>
-							<div class="searchbar-container">
-								<input type="text" id="tran-searchBar" placeholder="Search transaction ID">
-								<i class="ri-search-line"></i>
-							</div>
-						</div>
-					
-						<div class="table-main-container">
-							<div class="Table-title">
-								<h3>Transaction History</h3>
-							</div>
-							<div class="table-manipulation-elements-container">
-								<div class="filter-container">
-									<div class="filter" id="filter">
-										<label for="filter"><i class="ri-filter-2-line"></i></label>
-										<select id="tran-filter" class="custom-filter">
-											<option value="None">None</option>
-											<option value="Date">Date</option>
-											<option value="Amount">Amount</option>
-											<option value="File_size">File size</option>
-										</select>
-									</div>
-									<i class="ri-arrow-up-down-line" id="sort-direction-btn"></i>
-								</div>
-							</div>
-							<div class="table-container">
-								<table class="history-table">
-									<thead>
-										<tr>
-											<th>Transaction ID</th>
-											<th>Date</th>
-											<th>Pages</th>
-											<th>Color</th>
-											<th>Paper size</th>
-											<th>File size</th>
-											<th>Amount</th>
-											<th>Status</th>
-										</tr>
-									</thead>
-									<tbody id="transaction-table-body">
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-					<div id="error-tab">
-						<div class="manipulation-elements-container">
-							<div class="Date-slicer">
-								<label for="start-date">Date:</label>
-								<input type="date" id="error-start-date">
-								<label for="end-date">-</label>
-								<input type="date" id="error-end-date">
-							</div>
-							<div class="searchbar-container">
-								<input type="text" id="searchBar" placeholder="Search">
-								<i class="ri-search-line"></i>
-							</div>
-						</div>
-						<div class="table-main-container">
-							<div class="table-title">
-								<h3>Error Logs</h3>
-							</div>
-							<div class="table-manipulation-elements-container">
-								<div class="filter-container">
-									<div class="filter">
-										<label for="filter"><i class="ri-filter-2-line"></i></label>
-										<select id="filter" class="custom-filter">
-											<option value="none">None</option>
-											<option value="Date">Date</option>
-											<option value="amount">Amount</option>
-											<option value="File size">File size</option>
-										</select>
-									</div>
-									<i class="ri-arrow-up-down-line"></i>
-								</div>
-							</div>
-							<div class="table-container">
-								<table class="history-table">
-									<thead>
-										<tr>
-											<th>Error ID</th>
-											<th>Timestamp</th>
-											<th>Severity Level</th>
-											<th>Module</th>
-											<th>Error Message</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr>
-											<td>000001</td>
-											<td>2026-02-15 07:58:00</td>
-											<td>ERROR</td>
-											<td>File Upload</td>
-											<td>Paper Jam detected in Tray 1</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-				</div>
+<div id="history-and-logs">
+    <div class="main-title">
+        <i class="ri-file-history-fill"></i>
+        <h2>HISTORY AND LOGS</h2>
+    </div>
+
+    <div class="tabs-container"></div>
+
+    <div id="transaction-tab">
+        <div class="manipulation-elements-container">
+            <div class="Date-slicer">
+                <label for="transaction-start-date">Date:</label>
+                <input type="date" id="transaction-start-date">
+                <label for="transaction-end-date">-</label>
+                <input type="date" id="transaction-end-date">
+            </div>
+            <div class="searchbar-container">
+                <input type="text" id="tran-searchBar" placeholder="Search transaction ID">
+                <i class="ri-search-line"></i>
+            </div>
+        </div>
+
+        <div class="table-main-container">
+            <div class="Table-title">
+                <h3>Transaction History</h3>
+            </div>
+            <div class="table-manipulation-elements-container">
+                <div class="filter-container">
+                    <div class="filter">
+                        <label for="tran-filter"><i class="ri-filter-2-line"></i></label>
+                        <select id="tran-filter" class="custom-filter">
+                            <option value="None">None</option>
+                            <option value="Date">Date</option>
+                            <option value="Amount">Amount</option>
+                            <option value="File_size">File size</option>
+                        </select>
+                    </div>
+                    <i class="ri-arrow-up-down-line" id="sort-direction-btn"></i>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Date</th>
+                            <th>Pages</th>
+                            <th>Color</th>
+                            <th>Paper size</th>
+                            <th>File size</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transaction-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 				<div id="settings">
 					<div class="main-title">
 						<i class="ri-settings-2-fill"></i>

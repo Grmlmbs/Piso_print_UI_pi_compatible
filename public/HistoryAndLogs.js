@@ -1,116 +1,124 @@
-const historyLogsBtn = document.getElementById('historyLogsBtn');
-const errorLogsBtn = document.getElementById('errorLogsBtn');
+// =========================
+// DOM ELEMENTS
+// =========================
 const transactionSearchBar = document.getElementById('tran-searchBar');
 const transactionDropDown = document.getElementById('tran-filter');
 const sortBtn = document.getElementById('sort-direction-btn');
+const transactionTableBody = document.getElementById('transaction-table-body');
+const startDateInput = document.getElementById('transaction-start-date');
+const endDateInput = document.getElementById('transaction-end-date');
 
-function showTab(tabId) {
-	const sections = ['transaction-tab', 'error-tab'];
-	
-	sections.forEach(id => {
-		const element = document.getElementById(id);
-		if (element) {
-			element.style.display = (id === tabId) ? "block": "none";
-		}
-	});
-}
 
-historyAndLogsBtn.addEventListener('click', function() {
-	showTab('transaction-tab');
-	populateTranTable();
-});
-
-historyLogsBtn.addEventListener('click', function() {
-	showTab('transaction-tab');
-	
-	historyLogsBtn.style.backgroundColor = "#f4f4f4";
-	historyLogsBtn.style.color = "#15173d";
-	
-	errorLogsBtn.style.backgroundColor = "#15173d";
-	errorLogsBtn.style.color = "#f4f4f4";
-});
-
-errorLogsBtn.addEventListener('click', function() {
-	showTab('error-tab');
-	
-	historyLogsBtn.style.backgroundColor = "#15173d";
-	historyLogsBtn.style.color = "#f4f4f4";
-	
-	errorLogsBtn.style.backgroundColor = "#f4f4f4";
-	errorLogsBtn.style.color = "#15173d";
-});
-
-transactionSearchBar.addEventListener('input', function(event) {
-	populateTranTable()
-});
-
-transactionDropDown.addEventListener('change', function(event) {
-	if (transactionDropDown.value === 'None') {
-		populateTranTable();
-	}
-	populateTranTable();
-});
-
-sortBtn.addEventListener('click', toggleSortDirection);
-
+// =========================
+// GLOBAL STATE
+// =========================
 let sortDirection = 'DESC';
 
+// =========================
+// INITIALIZATION & LISTENERS
+// =========================
+
+if (historyAndLogsBtn) {
+    historyAndLogsBtn.addEventListener('click', function() {
+        // Show the main container (handled by your dashboard.js or similar)
+        // Then populate the table
+        populateTranTable();
+    });
+}
+
+// Search Input Listener
+transactionSearchBar.addEventListener('input', () => {
+    populateTranTable();
+});
+
+// Filter Dropdown Listener
+transactionDropDown.addEventListener('change', () => {
+    populateTranTable();
+});
+
+// Date Picker Listeners
+startDateInput.addEventListener('change', populateTranTable);
+endDateInput.addEventListener('change', populateTranTable);
+
+// Sort Button Listener
+sortBtn.addEventListener('click', toggleSortDirection);
+
+// =========================
+// FUNCTIONS
+// =========================
+
 function toggleSortDirection() {
-	const icon = document.getElementById('sort-direction-btn');
-	sortDirection = (sortDirection === 'DESC') ? 'ASC' : 'DESC';
-	
-	populateTranTable();
+    sortDirection = (sortDirection === 'DESC') ? 'ASC' : 'DESC';
+    // Optional: You could toggle the icon class here if you want it to flip
+    populateTranTable();
 }
 
 async function populateTranTable() {
-	const start = document.getElementById('transaction-start-date').value;
-	const end = document.getElementById('transaction-end-date').value;
-	const search = document.getElementById('tran-searchBar').value;
-	const sortBy = document.getElementById('tran-filter').value;
-	
-	const transactionTableBody = document.getElementById('transaction-table-body');
-	
-	const params = new URLSearchParams();
-	if (start && end) {
-		params.append('start', start);
-		params.append('end', end);
-	}
-	if (search) {
-		params.append('search', search);
-	}
-	
-	params.append('sortBy', sortBy);
-	params.append('order', sortDirection);
-	try {
-		const response = await fetch(`/api/tran-logs?${params.toString()}`);
-		const data = await response.json();
-		
-		if (!Array.isArray(data)) {
-			console.error("Received non-array data:", data);
-			return; 
-		}
-    
-		transactionTableBody.innerHTML = '';
-		
-		data.forEach(row => {
-			const tr = document.createElement('tr');
-			
-			const formattedDate = new Date(row.Date).toLocaleString();
-			
-			tr.innerHTML = `
-				<td>${row.Transaction_Id}</td>
-				<td>${formattedDate}</td>
-				<td>${row.Pages}</td>
-				<td>${row.Color}</td>
-				<td>${row.Paper_Size}</td>
-				<td>${row.File_Size}</td>
-				<td>PHP ${row.Amount.toFixed(2)}</td>
-				<td>${row.Status}</td>
-			`;
-			transactionTableBody.appendChild(tr);
-		});
-	} catch (err) {
-		console.error("Error populating table:", err);
-	}
-}
+    if (!transactionTableBody) return;
 
+    const start = startDateInput.value;
+    const end = endDateInput.value;
+    const search = transactionSearchBar.value;
+    const sortBy = transactionDropDown.value;
+    
+    const params = new URLSearchParams();
+    
+    // Only append dates if both are filled
+    if (start && end) {
+        params.append('start', start);
+        params.append('end', end);
+    }
+    
+    if (search) {
+        params.append('search', search);
+    }
+    
+    // Map 'None' or empty values to a default column
+    const validSortBy = (sortBy === 'None' || !sortBy) ? 'Date' : sortBy;
+    params.append('sortBy', validSortBy);
+    params.append('order', sortDirection);
+
+    try {
+        const response = await fetch(`/api/tran-logs?${params.toString()}`);
+        const data = await response.json();
+        
+        if (!Array.isArray(data)) {
+            console.error("Received non-array data:", data);
+            transactionTableBody.innerHTML = '<tr><td colspan="8">Error loading data.</td></tr>';
+            return; 
+        }
+    
+        transactionTableBody.innerHTML = '';
+        
+        if (data.length === 0) {
+            transactionTableBody.innerHTML = '<tr><td colspan="8">No records found.</td></tr>';
+            return;
+        }
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            // Format the date for readability
+            const formattedDate = row.Date ? new Date(row.Date).toLocaleString() : 'N/A';
+            
+            // Format the amount
+            const amount = typeof row.Amount === 'number' ? row.Amount.toFixed(2) : '0.00';
+            
+            // Use your exact table structure
+            tr.innerHTML = `
+                <td>${row.Transaction_Id || 'N/A'}</td>
+                <td>${formattedDate}</td>
+                <td>${row.Pages || 0}</td>
+                <td>${row.Color || 'N/A'}</td>
+                <td>${row.Paper_Size || 'N/A'}</td>
+                <td>${row.File_Size || '0KB'}</td>
+                <td>PHP ${amount}</td>
+                <td>${row.Status || 'Pending'}</td>
+            `;
+            transactionTableBody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error("Error populating table:", err);
+        transactionTableBody.innerHTML = '<tr><td colspan="8">Server error.</td></tr>';
+    }
+}
