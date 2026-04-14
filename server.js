@@ -20,6 +20,7 @@ const session = require('express-session');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
 app.use(express.json());
 
 // DB pragmas (if using better-sqlite3 wrapper that supports pragma)
@@ -635,6 +636,10 @@ parser.on('data', (data) => {
         if (isAcceptingCoins) {
             userBalance += 1; 
             console.log(`[SOCKET] Broadcasting New Balance: ₱${userBalance}`);
+            
+            const clientsCount = io.engine.clientsCount;
+            console.log(`[DEBUG] Sending to ${clientsCount} connected browsers.`);
+            
             io.emit('update_balance', userBalance);
         } else {
             console.log("[PAYMENT Rejected: Session not started yet.");
@@ -643,6 +648,61 @@ parser.on('data', (data) => {
         io.emit('update_balance', userBalance); 
     } else {
         console.log("[SERIAL] Ignore: Data did not contain 'COIN'");
+    }
+    
+    
+    // Handle Motor Completion (From Arduino handlePrintingEngine)
+    if (rawData === "JOB_FINISHED") {
+        console.log("[SERIAL] Paper dispensing complete.");
+        io.emit('print_status', { status: 'finished' });
+    }
+
+    // Handle Page Progress (From Arduino countPaper)
+    if (rawData.startsWith("P_COUNT:")) {
+        const currentCount = rawData.split(":")[1];
+        io.emit('dispense_progress', { count: currentCount });
+    }
+    
+    if (rawData === "RESET_WIFI_HOTSPOT") {
+        console.log("Hardware signal received: Resetting Hotspot...");
+        resetHotspot();
+    }
+});
+
+function resetHotspot() {
+    const command = `
+        sudo systemctl stop dnsmasq hostapd && 
+        sudo rm -f /var/lib/misc/dnsmasq.leases && 
+        sudo systemctl start hostapd dnsmasq
+    `;
+    
+    exec(command, (error, stdout, stderr) => {
+        
+        if (error) {
+            console.error(`Hotspot Reset Error: ${error.message}`);
+            return;
+        }
+        console.log("Hotspot services restarted successfully.");
+    });
+}
+
+// Dispense Paper Route
+app.post('/api/print/proceed', (req, res) => {
+    const { paperSize, copies } = req.body;
+    if (!paperSize || !copies) {
+        return res.status(400).json({ success: false, message: "Missing specs." });
+    }
+
+    const motorPrefix = (paperSize.toLowerCase() === 'legal') ? 'B' : 'A';
+    const command = `${motorPrefix}${copies}\n`;
+
+    if (serialPort && serialPort.isOpen) {
+        serialPort.write(command, (err) => {
+            if (err) return res.status(500).json({ success: false, message: err.message });
+            res.json({ success: true, message: "Dispensing..." });
+        });
+    } else {
+        res.status(500).json({ success: false, message: "Serial Port not open" });
     }
 });
 

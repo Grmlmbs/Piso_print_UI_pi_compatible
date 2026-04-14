@@ -129,6 +129,40 @@ async function syncBalance() {
     }
 }
 
+const dispenseBtn = document.getElementById("dispenseBtn");
+
+dispenseBtn.addEventListener("click", async () => {
+    // Show loading state while the request is being sent
+    const status = document.getElementById("status");
+    status.innerText = "Dispensing paper...please wait.";
+
+    try {
+        const response = await fetch('/api/print/proceed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                paperSize: paper, // Variable from your URL params
+                copies: parseInt(copies)
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log("Dispense command accepted by Pi.");
+            isPaperDispensed = true;
+            dispenseBtn.classList.add("hidden");
+            updateUI();
+        } else {
+            alert("Error: " + result.message);
+            //if (typeof hideLoading === "function") hideLoading();
+        }
+    } catch (error) {
+        console.error("Dispense request failed:", error);
+        //if (typeof hideLoading === "function") hideLoading();
+    }
+});
+
 function updateUI() {
     const balanceDisplay = document.getElementById("inserted-balance");
     const status = document.getElementById("status");
@@ -154,24 +188,38 @@ if (currentInserted < totalCost) {
         status.style.color = "#d9534f"; // Soft Red
         balanceDisplay.parentElement.style.color = "#d9534f";
         
+        printBtn.classList.add("hidden");
         // Disable Button
-        printBtn.disabled = true;
-        printBtn.style.backgroundColor = "#6c757d"; // Gray
-        printBtn.style.cursor = "not-allowed";
-        printBtn.style.boxShadow = "none";
-    } else {
+        dispenseBtn.disabled = true;
+        dispenseBtn.style.backgroundColor = "#6c757d"; // Gray
+        dispenseBtn.style.cursor = "not-allowed";
+        dispenseBtn.style.boxShadow = "none";
+    } 
+    
+    else {
         // SUCCESS STATE
         status.innerText = "Payment Received! You can now print.";
         status.style.color = "#28a745"; // Success Green
         balanceDisplay.parentElement.style.color = "#28a745";
         
+        /*
+        printBtn.classList.remove("hidden");
         // Enable and Highlight Button
-        printBtn.disabled = false;
-        printBtn.style.backgroundColor = "#28a745";
-        printBtn.style.cursor = "pointer";
-        printBtn.style.opacity = "1";
+        */
+        dispenseBtn.disabled = false;
+        dispenseBtn.style.backgroundColor = "#28a745";
+        dispenseBtn.style.cursor = "pointer";
+        dispenseBtn.style.opacity = "1";
         // Add a slight "glow" to show it's active
-        printBtn.style.boxShadow = "0 0 15px rgba(40, 167, 69, 0.5)";
+        dispenseBtn.style.boxShadow = "0 0 15px rgba(40, 167, 69, 0.5)";
+        
+    }
+    
+    if (currentInserted >= totalCost && isPaperDispensed) {
+        printBtn.classList.remove("hidden");
+        document.getElementById("status").innerText = "Please insert the paper in the printer";
+    } else {
+        printBtn.classList.add("hidden");
     }
 }
 async function init() {

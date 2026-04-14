@@ -580,6 +580,20 @@ body {
 		gap-bottom: 5px;
 	}
 	
+	.charts {
+    /* Changes from the default multi-column grid to a single column */
+    grid-template-columns: 1fr !important; 
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .charts-card {
+    width: 100%;
+    /* Ensure the cards don't feel too cramped on small screens */
+    padding: 15px;
+  }
+	
 }
 
 @media screen and (max-width: 768px) {
@@ -604,5 +618,25 @@ body {
 		grid-template-rows: 40px 40px 40px;
 		gap-bottom: 5px;
 	}
+	.main-title {
+    font-size: 1.2rem;
+  }
+  
+  .charts-card {
+    height: auto; /* Allow the chart to dictate height */
+    min-height: 300px;
+  }
+}
+
+@media print {
+    .main-container {
+        width: 100% !important;
+        height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    #sidebar, .header, .buttons {
+        display: none !important;
+    }
 }
 

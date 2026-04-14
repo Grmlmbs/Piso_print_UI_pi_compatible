@@ -1,3 +1,20 @@
+landing-html, landing-body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden !important; /* Prevents all scrolling */
+}
+
+lading-body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+    
+    /* Center everything in the viewport */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* COST PAGE STYLES */
 .cost-box {
     background: #ffffff;
@@ -9,7 +26,9 @@
     text-align: center;
     box-sizing: border-box;
 }
-
+.hidden {
+    display: none !important;
+}
 .ursLogo {
     margin: 50px;
 }
@@ -45,7 +64,7 @@
 }
 
 #status {
-    margin: 10px 0;
+    margin: 10px;
     font-weight: bold;
     min-height: 1.2em;
 }
@@ -101,6 +120,34 @@
 }
 
 /* ADMIN LOGIN STYLES */
+
+.back-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background-color: #f4f4f4;
+    color: #15173d;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.back-button:hover {
+    background-color: #15173d;
+    color: white;
+}
+
+/* Ensure the body is the reference point for the absolute positioning */
+.admin-body {
+    position: relative;
+    min-height: 100vh;
+}
 .admin-body {
     font-family: Arial, sans-serif;
     background: #f4f4f4;

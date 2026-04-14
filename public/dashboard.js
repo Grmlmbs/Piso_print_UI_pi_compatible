@@ -39,22 +39,18 @@ document.addEventListener('DOMContentLoaded', () => {
 	setInterval(updateUsageVolLineChart, 60000);
 	setInterval(updateTranDisStatColumn, 60000);
 });
-function initializeDateFields(startInput, endInput) {
-	if (startInput && endInput) {
-		
-		startInput.addEventListener('change', handleDateChange);
-		endInput.addEventListener('change', handleDateChange);
-		
-		const today = new Date();
-		const yesterday = new Date();
-		yesterday.setDate(today.getDate() - 1);
-		
-		const todayStr = today.toISOString().split('T')[0];
-		const yesterdayStr = yesterday.toISOString().split('T')[0];
-		
-		startInput.value = yesterdayStr;
-		endInput.value = todayStr;
-	}
+function initializeDateFields(startEl, endEl) {
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    
+    // Subtract 7 days from the current date
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    // Format to YYYY-MM-DD for the date input fields
+    const formatDate = (date) => date.toISOString().split('T')[0];
+
+    if (startEl) startEl.value = formatDate(sevenDaysAgo);
+    if (endEl) endEl.value = formatDate(today);
 }
 	
 function openSidebar() {
@@ -524,3 +520,83 @@ async function updateTranDisStatColumn() {
 		console.error("Error loading status trend:", err);
 	}
 }
+async function generatePDFReport() {
+    const { jsPDF } = window.jspdf;
+    const btn = document.getElementById('reportBtn');
+    
+    // Select sections
+    const cardsSection = document.querySelector('.main-cards');
+    const allChartCards = Array.from(document.querySelectorAll('.charts-card'));
+    
+    const originalText = btn.innerText;
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+
+    try {
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentWidth = pdfWidth - (margin * 2);
+
+        // --- PAGE 1: CARDS + 1st CHART ---
+        // Capture Cards
+        const cardsCanvas = await html2canvas(cardsSection, { scale: 2, backgroundColor: "#ffffff" });
+        const cardsImg = cardsCanvas.toDataURL('image/png');
+        const cardsHeight = (cardsCanvas.height * contentWidth) / cardsCanvas.width;
+
+        pdf.setFontSize(18);
+        pdf.text("Piso Print - Sales & Analytics Report", margin, 20);
+        pdf.setFontSize(10);
+        pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, 28);
+
+        // Add Cards to Page 1
+        pdf.addImage(cardsImg, 'PNG', margin, 35, contentWidth, cardsHeight);
+
+        // Capture 1st Chart for Page 1
+        if (allChartCards.length > 0) {
+            const firstChartCanvas = await html2canvas(allChartCards[0], { scale: 2, backgroundColor: "#ffffff" });
+            const firstChartImg = firstChartCanvas.toDataURL('image/png');
+            const firstChartHeight = (firstChartCanvas.height * contentWidth) / firstChartCanvas.width;
+            
+            // Place below cards
+            pdf.addImage(firstChartImg, 'PNG', margin, 35 + cardsHeight + 10, contentWidth, firstChartHeight);
+        }
+
+        // --- SUBSEQUENT PAGES: 2 CHARTS PER PAGE ---
+        let remainingCharts = allChartCards.slice(1); // Skip the first one already printed
+        
+        for (let i = 0; i < remainingCharts.length; i += 2) {
+            pdf.addPage();
+            let currentY = 20;
+
+            // Process first chart in pair
+            const canvasA = await html2canvas(remainingCharts[i], { scale: 2, backgroundColor: "#ffffff" });
+            const imgA = canvasA.toDataURL('image/png');
+            const heightA = (canvasA.height * contentWidth) / canvasA.width;
+            pdf.addImage(imgA, 'PNG', margin, currentY, contentWidth, heightA);
+            
+            currentY += heightA + 10;
+
+            // Process second chart in pair (if it exists)
+            if (remainingCharts[i + 1]) {
+                const canvasB = await html2canvas(remainingCharts[i + 1], { scale: 2, backgroundColor: "#ffffff" });
+                const imgB = canvasB.toDataURL('image/png');
+                const heightB = (canvasB.height * contentWidth) / canvasB.width;
+                pdf.addImage(imgB, 'PNG', margin, currentY, contentWidth, heightB);
+            }
+        }
+
+        pdf.save(`PisoPrint_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    } catch (error) {
+        console.error("PDF Multi-Page Error:", error);
+        alert("Failed to generate report.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+// Attach to your button (ensure your button has id="reportBtn")
+document.getElementById('reportBtn').addEventListener('click', generatePDFReport);
