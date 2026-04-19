@@ -266,13 +266,168 @@ pricingCancelBtn.addEventListener('click', function() {
 
 //Account settings codes
 editCredBtn.addEventListener('click', function() {
-	if (conPasswordField.style.display === "none" || credSaveBtn.disabled || credCancelBtn.disabled) {
-		conPasswordField.style.display = "block";
-		credSaveBtn.disabled = false;
-		credCancelBtn.disabled = false;
-	} else {
-		conPasswordField.style.display = "none";
-		credSaveBtn.disabled = true;
-		credCancelBtn.disabled = true;
-	}
+    const isDisabled = username.disabled;
+    
+    // Toggle input fields
+    username.disabled = !isDisabled;
+    password.disabled = !isDisabled;
+    conPassword.disabled = !isDisabled;
+    
+    if (isDisabled) {
+        // Switching to EDIT MODE
+        conPasswordContainer.style.display = "block";
+        credSaveBtn.disabled = false;
+        credCancelBtn.disabled = false;
+        editCredBtn.textContent = "Discard Changes";
+    } else {
+        // Switching back to VIEW MODE
+        resetAccountFields();
+    }
+});
+
+// Cancel Button Logic
+credCancelBtn.addEventListener('click', function() {
+    resetAccountFields();
+    // Re-fetch original data to clear any typed changes
+    fetchAccountData(); 
+});
+// Save Button Logic
+credSaveBtn.addEventListener('click', async function() {
+    const userVal = username.value.trim();
+    const passVal = password.value;
+    const conPassVal = conPassword.value;
+
+    // Basic Validation
+    if (!userVal || !passVal) {
+        alert("Username and Password cannot be empty.");
+        return;
+    }
+
+    if (passVal !== conPassVal) {
+        alert("Passwords do not match!");
+        return;
+    }
+
+    // API Call
+    try {
+        const response = await fetch('/api/settings/update-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: userVal,
+                password: passVal
+            })
+        });
+
+        if (response.ok) {
+            alert("Credentials updated successfully!");
+            resetAccountFields();
+        } else {
+            const errData = await response.json();
+            alert("Error: " + (errData.message || "Could not update."));
+        }
+    } catch (err) {
+        console.error("Update error:", err);
+        alert("Server error. Please try again later.");
+    }
+});
+
+// --- Account Settings Logic ---
+
+// Helper: Reset UI to locked state
+function resetAccountFields() {
+    username.disabled = true;
+    password.disabled = true;
+    conPassword.disabled = true;
+    conPasswordContainer.style.display = "none";
+    credSaveBtn.disabled = true;
+    credCancelBtn.disabled = true;
+    editCredBtn.textContent = "Edit Credentials";
+    
+    // Clear passwords for security
+    password.value = "";
+    conPassword.value = "";
+    
+    // Reset eye icons to default closed state
+    document.querySelectorAll('.pass-container i').forEach(icon => {
+        icon.classList.replace('ri-eye-off-fill', 'ri-eye-fill');
+        icon.previousElementSibling.type = "password";
+    });
+}
+
+// 1. Edit/Discard Button Toggle
+editCredBtn.addEventListener('click', function() {
+    const isCurrentlyViewMode = username.disabled;
+    
+    if (isCurrentlyViewMode) {
+        // Switch to EDIT MODE
+        username.disabled = false;
+        password.disabled = false;
+        conPassword.disabled = false;
+        conPasswordContainer.style.display = "block";
+        credSaveBtn.disabled = false;
+        credCancelBtn.disabled = false;
+        editCredBtn.textContent = "Discard Changes";
+    } else {
+        // Switch back to VIEW MODE (Discarding changes)
+        resetAccountFields();
+        fetchAccountData(); // Revert username to DB version
+    }
+});
+
+// 2. Cancel Button
+credCancelBtn.addEventListener('click', () => {
+    resetAccountFields();
+    fetchAccountData();
+});
+
+// 3. Save Button Logic
+credSaveBtn.addEventListener('click', async function() {
+    const userVal = username.value.trim();
+    const passVal = password.value;
+    const conPassVal = conPassword.value;
+
+    if (!userVal || !passVal) {
+        alert("Username and Password cannot be empty.");
+        return;
+    }
+
+    if (passVal !== conPassVal) {
+        alert("Passwords do not match!");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/settings/update-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: userVal, password: passVal })
+        });
+
+        if (response.ok) {
+            alert("Credentials updated successfully!");
+            resetAccountFields();
+            fetchAccountData(); // Refresh to show updated username
+        } else {
+            const errData = await response.json();
+            alert("Error: " + (errData.message || "Could not update."));
+        }
+    } catch (err) {
+        console.error("Update error:", err);
+        alert("Server error. Please try again later.");
+    }
+});
+
+// 4. Enhanced Eye Icon Toggle
+// This handles both the password and confirm password icons
+document.querySelectorAll('.pass-container i').forEach(icon => {
+    icon.style.cursor = "pointer"; // Make it look clickable
+    icon.addEventListener('click', function() {
+        const input = this.previousElementSibling;
+        const isPassword = input.type === "password";
+        
+        input.type = isPassword ? "text" : "password";
+        this.classList.toggle('ri-eye-fill', !isPassword);
+        this.classList.toggle('ri-eye-off-fill', isPassword);
+    });
 });

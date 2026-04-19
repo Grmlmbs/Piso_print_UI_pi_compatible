@@ -4,7 +4,13 @@ body.landing-body {
     height: 100vh !important;
     width: 100vw !important;
     overflow: hidden !important;
-    position: fixed !important; /* Extra insurance against mobile rubber-banding */
+    position: fixed !important; 
+    /* Add these to center the child container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
 }
 
 /* Ensure the container fills the viewport without overflowing */
@@ -31,9 +37,8 @@ body.landing-body {
     display: none !important;
 }
 .ursLogo {
-    margin: 50px;
+    margin-bottom: 20px; /* Changed from 50px all around to just bottom */
 }
-
 .cost-action-area {
     display: flex;
     gap: 10px;
@@ -254,13 +259,17 @@ body.landing-body {
     color: #007bff;
 }
 
+/* LANDING PAGE STYLES */
 .landing-container {
     display: flex;
-    flex-direction:column;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
     text-align: center;
+    /* Remove fixed height/width here so it respects the body's flex layout */
+    width: 100%;
+    max-width: 600px; /* Optional: keeps content from stretching too wide on ultrawide monitors */
+    padding: 20px;
 }
 .btn-group {
     margin-top: 20px;
@@ -277,9 +286,17 @@ body.landing-body {
     border-radius: 5px;
 }
 .btn-admin {
-    background-color: #6c757d;
+    background-color: transparent; /* Remove solid gray */
+    color: #6c757d;               /* Muted text color */
+    border: 2px solid #6c757d;    /* Subtle border */
+    font-size: 1rem;              /* Slightly smaller than the main button */
+    transition: all 0.3s ease;
 }
-    
+
+.btn-admin:hover {
+    background-color: #6c757d;    /* Fills in only on hover */
+    color: white;
+}
 
 /* RESET */
 * {
@@ -594,5 +611,29 @@ button:hover {
     }
     .buttons button {
         width: 100%;            /* fill container width */
+    }
+}
+
+/* Stack buttons on mobile devices */
+@media (max-width: 480px) {
+    .btn-group {
+        flex-direction: column; /* Switches from horizontal to vertical */
+        gap: 15px;              /* Adjusts spacing between stacked buttons */
+        width: 100%;            /* Allows buttons to take up container width */
+        padding: 0 20px;        /* Adds a little side breathing room */
+    }
+
+    .btn-main {
+        width: 100%;            /* Makes buttons full-width for easier tapping */
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-admin {
+        width: auto;              /* Doesn't have to be full width if you want it smaller */
+        padding: 10px 20px;       /* Smaller padding than the main button */
+        margin-top: 10px;         /* Separate it from the main flow */
+        border: none;             /* Optional: make it look like a text link */
+        text-decoration: underline;
     }
 }

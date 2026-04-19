@@ -667,22 +667,37 @@ parser.on('data', (data) => {
         console.log("Hardware signal received: Resetting Hotspot...");
         resetHotspot();
     }
+    if (rawData === "PAPER_INSERTED") {
+        console.log("Paper has been inserted.");
+        io.emit('paper_ready', { inserted: true});
+    }
 });
 
-function resetHotspot() {
+// Assuming 'port' is your initialized SerialPort instance
+function resetHotspot(port) {
+    // 1. Tell Arduino the hotspot is going down
+    serialPort.write("HOTSPOT_OFF\n", (err) => {
+        if (err) return console.error('Error on write: ', err.message);
+    });
+
     const command = `
         sudo systemctl stop dnsmasq hostapd && 
         sudo rm -f /var/lib/misc/dnsmasq.leases && 
         sudo systemctl start hostapd dnsmasq
     `;
-    
+
     exec(command, (error, stdout, stderr) => {
-        
         if (error) {
             console.error(`Hotspot Reset Error: ${error.message}`);
+            // Optional: Send an error signal to Arduino (e.g., "HOTSPOT_ERR")
             return;
         }
-        console.log("Hotspot services restarted successfully.");
+
+        // 2. Tell Arduino the hotspot is back up
+        serialPort.write("HOTSPOT_ON\n", (err) => {
+            if (err) return console.error('Error on write: ', err.message);
+            console.log("Hotspot services restarted and Arduino notified.");
+        });
     });
 }
 

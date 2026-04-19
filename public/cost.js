@@ -1,3 +1,9 @@
+// 1. FIXED: Declare missing variable at top level
+let isPaperDispensed = false; 
+let totalCost = null;
+let isPaperInPrinter = false;
+let currentInserted = 0;
+
 // Read values from URL
 const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
@@ -13,109 +19,26 @@ document.getElementById("copies").innerText = copies;
 document.getElementById("color").innerText = color;
 document.getElementById("paper").innerText = paper;
 
-let totalCost = null;
+const socket = io(); 
 
-// Ask server to scan images + calculate cost
+// --- FUNCTIONS ---
+
 async function calculateCost() {
     const response = await fetch("/calculate-cost", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paper, baseName, color, pages, copies })
     });
-
     const result = await response.json();
-
     if (!result.success) {
         alert("Cost calculation failed: " + result.message);
         return;
     }
-
     totalCost = result.totalCost;
     document.getElementById("cost").innerText = totalCost;
     updateUI();
 }
 
-// PRINT BUTTON
-document.getElementById("printBtn").addEventListener("click", async () => {
-    const payment = currentInserted;
-
-    if (payment < totalCost) {
-        alert("Payment not enough!");
-        return;
-    }
-    
-    if(typeof showLoading === "function") {
-        showLoading("Sending document to printer...");
-    }
-    
-    try {
-        // 1. Trigger the actual CUPS Print Command
-        const printResponse = await fetch("/print-job", {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ baseName, pages, copies, color, paper })
-        });
-
-        const printResult = await printResponse.json();
-
-        if (printResult.success) {
-            // 2. Update transaction (FIXED TYPO HERE: transaction, not transactoin)
-            const txResponse = await fetch("/transaction/update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    id,
-                    Amount: totalCost,
-                    Status: "completed"
-                })
-            });
-            const txResult = await txResponse.json();
-            if (txResult.success) {
-                await fetch("/balance/reset", { method: "POST" });
-                alert("Printing started! Please wait.");
-                window.location.href = "/upload.html";
-            }
-            
-            setTimeout(() => {
-                window.location.href = "/upload.html";
-            }, 1500);
-            
-        } else {
-            hideLoading();
-            alert("Printer Error: " + printResult.message);
-        }
-        
-        if (printResult.success) {
-        await fetch("/balance/reset", { method: "POST" });
-        
-        alert("Printing started! Please wait.");
-        window.location.href = "/upload.html";
-        }   
-        
-    } catch (err) {
-        console.error("Print Error:", err);
-        hideLoading();
-        alert("Failed to reach printer server.");
-    }
-});
-
-// CANCEL BUTTON
-document.getElementById("cancelBtn").addEventListener("click", async () => {
-    // Show laoding overlay
-    
-    window.history.back();
-});
-
-const socket = io(); 
-let currentInserted = 0;
-
-// 1. Listen for live coin updates from server.js
-socket.on('update_balance', (newBalance) => {
-    currentInserted = newBalance;
-    updateUI();
-});
-
-// Synce the balance on page load.
 async function syncBalance() {
     try {
         const response = await fetch('/balance/current');
@@ -129,10 +52,11 @@ async function syncBalance() {
     }
 }
 
-const dispenseBtn = document.getElementById("dispenseBtn");
+// --- EVENT LISTENERS ---
 
+// DISPENSE BUTTON
+const dispenseBtn = document.getElementById("dispenseBtn");
 dispenseBtn.addEventListener("click", async () => {
-    // Show loading state while the request is being sent
     const status = document.getElementById("status");
     status.innerText = "Dispensing paper...please wait.";
 
@@ -141,92 +65,164 @@ dispenseBtn.addEventListener("click", async () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                paperSize: paper, // Variable from your URL params
+                paperSize: paper,
                 copies: parseInt(copies)
             })
         });
 
         const result = await response.json();
-        
         if (result.success) {
             console.log("Dispense command accepted by Pi.");
-            isPaperDispensed = true;
+            isPaperDispensed = true; 
             dispenseBtn.classList.add("hidden");
             updateUI();
         } else {
             alert("Error: " + result.message);
-            //if (typeof hideLoading === "function") hideLoading();
         }
     } catch (error) {
         console.error("Dispense request failed:", error);
-        //if (typeof hideLoading === "function") hideLoading();
     }
 });
 
+// PRINT BUTTON
+document.getElementById("printBtn").addEventListener("click", async () => {
+    if (currentInserted < totalCost) {
+        alert("Payment not enough!");
+        return;
+    }
+    
+    if(typeof showLoading === "function") {
+        showLoading("Sending document to printer...");
+    }
+    
+    try {
+        const printResponse = await fetch("/print-job", {
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ baseName, pages, copies, color, paper })
+        });
+
+        const printResult = await printResponse.json();
+
+        if (printResult.success) {
+            await fetch("/transaction/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, Amount: totalCost, Status: "completed" })
+            });
+
+            await fetch("/balance/reset", { method: "POST" });
+
+            alert("Printing started! Please wait.");
+            window.location.replace("/upload.html");
+            
+        } else {
+            if (typeof hideLoading === "function") hideLoading();
+            alert("Printer Error: " + printResult.message);
+        }
+        
+    } catch (err) {
+        console.error("Print Error:", err);
+        if (typeof hideLoading === "function") hideLoading();
+        alert("Failed to reach printer server.");
+    }
+});
+
+// CANCEL BUTTON
+document.getElementById("cancelBtn").addEventListener("click", () => {
+    window.history.back();
+});
+
+// --- SOCKETS ---
+
+socket.on('update_balance', (newBalance) => {
+    currentInserted = newBalance;
+    updateUI();
+});
+
+socket.on('paper_ready', (data) => {
+    isPaperInPrinter = data.inserted;
+    updateUI();
+});
+
+// --- UI LOGIC ---
+
 function updateUI() {
     const balanceDisplay = document.getElementById("inserted-balance");
+    const balanceContainer = balanceDisplay ? balanceDisplay.parentElement : null; // The <h1> container
     const status = document.getElementById("status");
     const printBtn = document.getElementById("printBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const dispenseBtn = document.getElementById("dispenseBtn");
 
-    // Update the number on screen
-    if (balanceDisplay) {
-        balanceDisplay.innerText = currentInserted;
+    if (balanceDisplay) balanceDisplay.innerText = currentInserted;
+
+    // 1. Cancel Button Logic
+    if (cancelBtn) {
+        currentInserted > 0 ? cancelBtn.classList.add("hidden") : cancelBtn.classList.remove("hidden");
     }
     
     if (totalCost === null || totalCost === 0) {
-        status.innerText = "Please insert coins.";
-        status.style.color = "#666"; 
-        printBtn.disabled = true;
-        printBtn.style.opacity = "0.5";
+        status.innerText = "Calculating cost...";
         return; 
     }
 
-    // Logic to enable/disable the print button
-if (currentInserted < totalCost) {
-        // INSUFFICIENT STATE
+    // 2. STATE: Insufficient Payment
+    if (currentInserted < totalCost) {
         status.innerText = "Waiting for ₱" + (totalCost - currentInserted) + " more...";
-        status.style.color = "#d9534f"; // Soft Red
-        balanceDisplay.parentElement.style.color = "#d9534f";
+        status.style.color = "#d9534f"; // Red
         
-        printBtn.classList.add("hidden");
-        // Disable Button
+        // Turn the Peso symbol and number Red
+        if (balanceContainer) balanceContainer.style.color = "#d9534f";
+        
         dispenseBtn.disabled = true;
-        dispenseBtn.style.backgroundColor = "#6c757d"; // Gray
+        dispenseBtn.style.opacity = "0.5";
         dispenseBtn.style.cursor = "not-allowed";
-        dispenseBtn.style.boxShadow = "none";
+        printBtn.classList.add("hidden");
     } 
     
-    else {
-        // SUCCESS STATE
-        status.innerText = "Payment Received! You can now print.";
-        status.style.color = "#28a745"; // Success Green
-        balanceDisplay.parentElement.style.color = "#28a745";
+    // 3. STATE: Paid, but not yet dispensed
+    else if (!isPaperDispensed) {
+        status.innerText = "Payment Received! Click 'Dispense Paper' below.";
+        status.style.color = "#28a745"; // Green
         
-        /*
-        printBtn.classList.remove("hidden");
-        // Enable and Highlight Button
-        */
+        // Turn the Peso symbol and number Green
+        if (balanceContainer) balanceContainer.style.color = "#28a745";
+        
         dispenseBtn.disabled = false;
-        dispenseBtn.style.backgroundColor = "#28a745";
-        dispenseBtn.style.cursor = "pointer";
         dispenseBtn.style.opacity = "1";
-        // Add a slight "glow" to show it's active
-        dispenseBtn.style.boxShadow = "0 0 15px rgba(40, 167, 69, 0.5)";
-        
-    }
-    
-    if (currentInserted >= totalCost && isPaperDispensed) {
-        printBtn.classList.remove("hidden");
-        document.getElementById("status").innerText = "Please insert the paper in the printer";
-    } else {
+        dispenseBtn.style.cursor = "pointer";
+        dispenseBtn.classList.remove("hidden");
         printBtn.classList.add("hidden");
     }
+    
+    // 4. STATE: Dispensed, but not in printer tray
+    else if (!isPaperInPrinter) {
+        status.innerText = "Please insert the dispensed paper into the printer tray.";
+        status.style.color = "#ff8c00"; // Orange
+        
+        // Keep the balance green since they already paid
+        if (balanceContainer) balanceContainer.style.color = "#28a745";
+        
+        dispenseBtn.classList.add("hidden");
+        printBtn.classList.add("hidden");
+    }
+    
+    // 5. STATE: Ready to Print
+    else {
+        status.innerText = "Ready to Print!";
+        status.style.color = "#28a745";
+        
+        if (balanceContainer) balanceContainer.style.color = "#28a745";
+        
+        dispenseBtn.classList.add("hidden");
+        printBtn.classList.remove("hidden");
+        printBtn.disabled = false;
+    }
 }
+
 async function init() {
-    Promise.all([
-        calculateCost(),
-        syncBalance()
-    ]);
+    await Promise.all([calculateCost(), syncBalance()]);
 }
-// Initial call to set state on page load
+
 init();

@@ -281,13 +281,15 @@ async function updateTranDistributionPie() {
           chart: {
 			width: 500,
 			type: 'pie',
+			toolbar: { show: false }
 			},
         labels: statusLabels,
         responsive: [{
           breakpoint: 480,
           options: {
             chart: {
-              width: 200
+              width: 200,
+              toolbar: { show: false }
             },
             legend: {
               position: 'bottom'
@@ -333,7 +335,8 @@ async function updateSalesTrendColChart() {
         }],
           chart: {
           type: 'bar',
-          height: 350
+          height: 350,
+          toolbar: { show: false }
         },
         plotOptions: {
           bar: {
@@ -408,6 +411,7 @@ async function updateUsageVolLineChart() {
             data: count
         }],
           chart: {
+			toolbar: { show: false },
           height: 350,
           type: 'line',
           zoom: {
@@ -476,7 +480,8 @@ async function updateTranDisStatColumn() {
           series: seriesData,
           chart: {
           type: 'bar',
-          height: 350
+          height: 350,
+          toolbar: { show: false }
         },
         plotOptions: {
           bar: {

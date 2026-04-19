@@ -640,3 +640,199 @@ body {
     }
 }
 
+/* --- New Settings Layout Styling --- */
+
+/* Targets the parent container of the two settings cards */
+.options-container {
+    display: flex;
+    flex-direction: row; /* Horizontal alignment */
+    gap: 30px;           /* Space between the two columns */
+    align-items: flex-start;
+    flex-wrap: wrap;     /* Allows wrapping if the screen gets too small */
+}
+
+/* Individual Settings Cards (Pricing & Account) */
+.sub-options-container {
+    flex: 1;             /* Grows to fill equal space */
+    min-width: 300px;    /* Prevents cards from getting too squashed */
+    max-width: 600px;    /* Limits width on very large screens */
+    margin-bottom: 0;    /* Overriding previous margin for flex alignment */
+}
+
+/* Responsive: Stack them back to 1 column on smaller tablets/phones */
+@media screen and (max-width: 992px) {
+    .options-container {
+        flex-direction: column;
+    }
+    
+    .sub-options-container {
+        max-width: 100%; /* Take full width when stacked */
+    }
+}
+
+/* --- Fix Overflows and Match Heights --- */
+
+/* 1. Ensure all inputs stay inside their parent containers */
+.account-input-field-container input,
+.price-field input {
+    width: 100% !important; /* Force full width of the parent */
+    box-sizing: border-box;  /* Includes padding/border in the width calculation */
+    max-width: 100%;        /* Prevents horizontal overflow */
+}
+
+/* 2. Adjust the Pricing inputs to not be too wide since they are short numbers */
+.price-field input {
+    width: 60px !important; /* Overriding the 100% for the small pricing boxes */
+}
+
+/* 3. Make containers equal height */
+.options-container {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    align-items: stretch; /* This forces both cards to be the same height */
+    flex-wrap: wrap;
+}
+
+.sub-options-container {
+    flex: 1;
+    min-width: 300px;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column; /* Allows internal spacing control */
+}
+
+/* 4. Push buttons to the bottom of the card so they align even if content differs */
+.sub-options-container .buttons {
+    margin-top: auto; 
+    padding-top: 20px;
+}
+
+/* Responsive: stack on small screens */
+@media screen and (max-width: 992px) {
+    .options-container {
+        flex-direction: column;
+    }
+    .sub-options-container {
+        max-width: 100%;
+        height: auto; /* Allow height to be natural when stacked */
+    }
+}
+
+/* --- Fix Button Overflow and Container Alignment --- */
+
+/* 1. Fix the button container overflow */
+.sub-options-container .buttons {
+    display: flex;
+    flex-wrap: wrap;       /* Allows buttons to move to a new line if they don't fit */
+    gap: 10px;             /* Space between buttons */
+    justify-content: flex-end; 
+    margin-top: auto;      /* Pushes buttons to the bottom */
+    width: 100%;           /* Stay within parent bounds */
+}
+
+/* 2. Ensure buttons themselves don't force the container to grow */
+.sub-options-container .buttons button {
+    flex: 1 1 auto;        /* Allows buttons to grow/shrink based on space */
+    min-width: 100px;      /* Prevents buttons from getting too tiny */
+    max-width: 100%;       /* Prevents buttons from exceeding card width */
+    white-space: nowrap;   /* Keeps text on one line inside button */
+}
+
+/* 3. Keep heights equal on large screens */
+.options-container {
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    align-items: stretch;  /* Keeps heights identical */
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+/* 4. Fix card width and internal padding */
+.sub-options-container {
+    flex: 1;
+    min-width: 250px;      /* Slightly smaller min-width for better fit */
+    max-width: 600px;
+    box-sizing: border-box; /* Includes padding in width calculation */
+    overflow: hidden;      /* Safety net for any internal spills */
+    display: flex;
+    flex-direction: column;
+}
+
+/* 5. Force account inputs to stay inside */
+.account-input-field-container, 
+.pass-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.account-input-field-container input {
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* Responsive adjustment */
+@media screen and (max-width: 1200px) {
+    /* If 3 buttons are still tight, make them full width on mid-size screens */
+    .sub-options-container .buttons button {
+        flex: 1 1 100%;
+    }
+}
+
+@media screen and (max-width: 992px) {
+    .options-container {
+        flex-direction: column;
+    }
+    .sub-options-container {
+        max-width: 100%;
+    }
+}
+
+/* --- Dynamic Stacking based on Content Width --- */
+
+/* 1. Ensure the button container allows wrapping */
+.sub-options-container .buttons {
+    display: flex;
+    flex-wrap: wrap;       /* Crucial: allows stacking when space runs out */
+    gap: 10px;
+    margin-top: auto;      
+    justify-content: flex-end;
+    width: 100%;
+}
+
+/* 2. Control button behavior when stacking */
+.sub-options-container .buttons button {
+    /* flex-grow: 1, flex-shrink: 1, flex-basis: 150px */
+    flex: 1 1 150px;       
+    /* When the card width < (150px * number of buttons), they stack */
+    
+    max-width: 100%;
+    min-width: 0;          /* Allows button to shrink if needed before wrapping */
+    white-space: nowrap;
+}
+
+/* 3. Set the 'Minimum Width' for the input area */
+.account-input-field-container,
+.input-field-container {
+    min-width: 200px;      /* This is your "Minimum Width" threshold */
+    width: 100%;
+}
+
+/* 4. Ensure the card handles its internal layout during the squeeze */
+.sub-options-container {
+    display: flex;
+    flex-direction: column;
+    min-width: 250px;      /* Prevents the entire card from disappearing */
+    box-sizing: border-box;
+    overflow: hidden;      /* Prevents the horizontal scrollbar during the transition */
+}
+
+/* 5. Clean up for Pricing inputs so they stay small while buttons stack */
+.price-field input {
+    width: 60px !important;
+    flex: 0 0 auto !important; /* Don't let pricing inputs grow like account inputs */
+}
+
+
+
